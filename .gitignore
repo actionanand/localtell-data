@@ -1,3 +1,14 @@
 
 # Generated LocalTell release data
 release-assets/
+
+# Generated release data
+release-assets/
+output/
+work/
+
+# Downloaded third-party source data
+source/opencellid/*.csv
+source/opencellid/*.csv.gz
+source/osm/*.pbf
+source/osm/*.zip

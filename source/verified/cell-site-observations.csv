@@ -1,0 +1,3 @@
+mcc,mnc,radio,area_code,cell_id,pci,arfcn,band,site_id,evidence
+405,869,NR,89,4367237120,278,634080,n78,734366,"Nearby Tarang site supports Jio 4G/5G at 3300 MHz; physical site observed ~200 m away"
+404,94,LTE,55119,168478730,186,39150,40,734366,"Nearby Tarang site supports Airtel 2G/4G/5G at 2300 MHz; physical site observed ~200 m away"

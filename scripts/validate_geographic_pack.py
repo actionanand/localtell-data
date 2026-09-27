@@ -8,6 +8,7 @@ import sys
 REQUIRED = {"pack_meta", "place", "place_geometry", "place_geometry_rtree"}
 PLACE_COLUMNS = {"id", "name", "place_type", "sub_district", "district", "state", "state_code", "latitude", "longitude"}
 REQUIRED_META = {"schema_version", "pack_id", "pack_name", "pack_version"}
+SETTLEMENT_TYPES = {"neighbourhood", "suburb", "locality", "hamlet", "village", "town", "city"}
 
 
 def parse_ring(value):
@@ -26,6 +27,8 @@ def parse_ring(value):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("database")
+    parser.add_argument("--expected-state-code")
+    parser.add_argument("--expected-pack-id")
     args = parser.parse_args()
     db = sqlite3.connect(args.database)
     cursor = db.cursor()
@@ -41,6 +44,8 @@ def main():
         sys.exit(f"schema_version must be 3, found {meta.get('schema_version')!r}")
     if REQUIRED_META - set(meta):
         sys.exit(f"missing pack metadata: {', '.join(sorted(REQUIRED_META - set(meta)))}")
+    if args.expected_pack_id and meta.get("pack_id") != args.expected_pack_id:
+        sys.exit(f"pack_id must be {args.expected_pack_id}, found {meta.get('pack_id')!r}")
     columns = {row[1] for row in cursor.execute("PRAGMA table_info(place)")}
     if PLACE_COLUMNS - columns:
         sys.exit(f"place is missing columns: {', '.join(sorted(PLACE_COLUMNS - columns))}")
@@ -54,6 +59,9 @@ def main():
     dangling = cursor.execute("SELECT COUNT(*) FROM place_geometry g LEFT JOIN place p ON p.id=g.place_id WHERE p.id IS NULL").fetchone()[0]
     if dangling:
         sys.exit(f"{dangling} geometries reference missing places")
+    orphan_rtree = cursor.execute("SELECT COUNT(*) FROM place_geometry_rtree r LEFT JOIN place_geometry g ON g.id=r.id WHERE g.id IS NULL").fetchone()[0]
+    if orphan_rtree:
+        sys.exit(f"{orphan_rtree} RTree rows reference missing geometry")
     for geometry_id, geometry in cursor.execute("SELECT id, geometry FROM place_geometry"):
         try:
             parse_ring(geometry)
@@ -62,6 +70,16 @@ def main():
     for place_id, lat, lon in cursor.execute("SELECT id, latitude, longitude FROM place WHERE latitude IS NOT NULL OR longitude IS NOT NULL"):
         if lat is None or lon is None or not all(math.isfinite(value) for value in (lat, lon)) or not (-90 <= lat <= 90 and -180 <= lon <= 180):
             sys.exit(f"malformed representative coordinate for place {place_id}")
+    if args.expected_state_code:
+        wrong_codes = cursor.execute("SELECT COUNT(*) FROM place WHERE state_code IS NOT NULL AND state_code != ?", (args.expected_state_code,)).fetchone()[0]
+        if wrong_codes:
+            sys.exit(f"{wrong_codes} populated state_code values differ from {args.expected_state_code}")
+        foreign_states = cursor.execute("SELECT DISTINCT state FROM place WHERE state IS NOT NULL AND lower(state) NOT LIKE '%tamil%nadu%'").fetchall() if args.expected_state_code == "IN-TN" else []
+        if foreign_states:
+            sys.exit(f"state values do not look like Tamil Nadu: {foreign_states}")
+    invalid_types = cursor.execute("SELECT DISTINCT place_type FROM place WHERE place_type NOT IN ('administrative_boundary','neighbourhood','suburb','locality','hamlet','village','town','city')").fetchall()
+    if invalid_types:
+        sys.exit(f"unsupported place types: {invalid_types}")
     print(f"VALID: schema-v3, {geometry_count} geometry rows, {cursor.execute('SELECT COUNT(*) FROM place').fetchone()[0]} places")
 
 

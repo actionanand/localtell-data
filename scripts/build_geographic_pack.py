@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Build a LocalTell schema-v3 geographic locality pack from a local OSM PBF.
-
-Requires pyosmium: python3 -m pip install osmium
-"""
+"""Build a LocalTell schema-v3 geographic pack from a local OSM PBF."""
 import argparse
 import math
 import os
@@ -12,12 +9,12 @@ import time
 
 try:
     import osmium
-except ImportError:
-    sys.exit("Missing dependency 'osmium'. Install it with: python3 -m pip install osmium")
+except ImportError:  # Unit tests can exercise geometry/database code without this.
+    osmium = None
 
-
-SETTLEMENT_TYPES = {"city", "town", "village", "hamlet", "suburb", "neighbourhood", "locality"}
-ADMIN_LEVELS = {"3", "4", "5", "6", "7", "8"}
+SETTLEMENT_TYPES = ("neighbourhood", "suburb", "locality", "hamlet", "village", "town", "city")
+SETTLEMENT_SET = set(SETTLEMENT_TYPES)
+ADMIN_LEVELS = {"4", "5", "6", "7", "8"}
 
 
 def valid_point(point):
@@ -33,45 +30,19 @@ def close_ring(points):
     return points if len(set(points[:-1])) >= 3 else None
 
 
-def perpendicular_distance(point, start, end):
-    x, y = point
-    x1, y1 = start
-    x2, y2 = end
-    dx, dy = x2 - x1, y2 - y1
-    if dx == 0 and dy == 0:
-        return math.hypot(x - x1, y - y1)
-    return abs(dy * x - dx * y + x2 * y1 - y2 * x1) / math.hypot(dx, dy)
+def bbox(ring):
+    lats, lons = zip(*ring)
+    return min(lats), max(lats), min(lons), max(lons)
 
 
-def simplify_open(points, tolerance):
-    if len(points) < 3 or tolerance <= 0:
-        return points
-    most_distant, index = tolerance, None
-    for i in range(1, len(points) - 1):
-        distance = perpendicular_distance(points[i], points[0], points[-1])
-        if distance > most_distant:
-            most_distant, index = distance, i
-    if index is None:
-        return [points[0], points[-1]]
-    return simplify_open(points[:index + 1], tolerance)[:-1] + simplify_open(points[index:], tolerance)
-
-
-def simplify_ring(ring, tolerance):
-    ring = close_ring(ring)
-    if not ring:
-        return None
-    # Douglas-Peucker needs an open line. Preserve validity if simplification
-    # would collapse a small polygon.
-    simplified = simplify_open(ring[:-1] + [ring[0]], tolerance)
-    result = close_ring(simplified[:-1])
-    return result if result else ring
+def point_in_bbox(point, bounds):
+    return bounds[0] <= point[0] <= bounds[1] and bounds[2] <= point[1] <= bounds[3]
 
 
 def contains(ring, lat, lon):
+    """Even/odd point-in-ring test compatible with Android's single-ring contract."""
     inside = False
-    for index in range(len(ring) - 1):
-        lat1, lon1 = ring[index]
-        lat2, lon2 = ring[index + 1]
+    for (lat1, lon1), (lat2, lon2) in zip(ring, ring[1:]):
         if (lat1 > lat) != (lat2 > lat):
             crossing = (lon2 - lon1) * (lat - lat1) / (lat2 - lat1) + lon1
             if lon < crossing:
@@ -79,181 +50,227 @@ def contains(ring, lat, lon):
     return inside
 
 
-def bbox(ring):
-    lats, lons = zip(*ring)
-    return min(lats), max(lats), min(lons), max(lons)
+def point_in_feature(point, feature):
+    return any(point_in_bbox(point, bounds) and contains(ring, *point)
+               for ring, bounds in zip(feature["rings"], feature["bounds"]))
+
+
+def polygon_centroid(ring):
+    area_twice = cx = cy = 0.0
+    for (lat1, lon1), (lat2, lon2) in zip(ring, ring[1:]):
+        cross = lon1 * lat2 - lon2 * lat1
+        area_twice += cross
+        cx += (lon1 + lon2) * cross
+        cy += (lat1 + lat2) * cross
+    return None if abs(area_twice) < 1e-15 else (cy / (3 * area_twice), cx / (3 * area_twice))
+
+
+def interior_point(ring):
+    """Return a deterministic strictly interior point; never an unchecked average."""
+    ring = close_ring(ring)
+    if not ring:
+        return None
+    min_lat, max_lat, min_lon, max_lon = bbox(ring)
+    candidates = [polygon_centroid(ring), ((min_lat + max_lat) / 2, (min_lon + max_lon) / 2)]
+    for candidate in candidates:
+        if candidate and contains(ring, *candidate):
+            return candidate
+    # Scan between each pair of vertex latitudes. A valid polygon always has
+    # an interior span on at least one such scanline.
+    latitudes = sorted(set(point[0] for point in ring[:-1]))
+    for lower, upper in zip(latitudes, latitudes[1:]):
+        scan_lat = (lower + upper) / 2
+        crossings = sorted((lon2 - lon1) * (scan_lat - lat1) / (lat2 - lat1) + lon1
+                           for (lat1, lon1), (lat2, lon2) in zip(ring, ring[1:])
+                           if (lat1 > scan_lat) != (lat2 > scan_lat))
+        spans = [(right - left, (left + right) / 2) for left, right in zip(crossings[::2], crossings[1::2]) if right > left]
+        if spans:
+            _, scan_lon = max(spans)
+            if contains(ring, scan_lat, scan_lon):
+                return scan_lat, scan_lon
+    return None
+
+
+def perpendicular_distance(point, start, end):
+    x, y = point; x1, y1 = start; x2, y2 = end
+    dx, dy = x2 - x1, y2 - y1
+    return math.hypot(x - x1, y - y1) if dx == 0 and dy == 0 else abs(dy*x - dx*y + x2*y1 - y2*x1) / math.hypot(dx, dy)
+
+
+def simplify_open(points, tolerance):
+    if len(points) < 3 or tolerance <= 0:
+        return points
+    distance, index = tolerance, None
+    for current in range(1, len(points) - 1):
+        candidate = perpendicular_distance(points[current], points[0], points[-1])
+        if candidate > distance:
+            distance, index = candidate, current
+    return [points[0], points[-1]] if index is None else simplify_open(points[:index + 1], tolerance)[:-1] + simplify_open(points[index:], tolerance)
+
+
+def simplify_ring(ring, tolerance):
+    original = close_ring(ring)
+    if not original:
+        return None
+    simplified = close_ring(simplify_open(original[:-1] + [original[0]], tolerance)[:-1])
+    return simplified if simplified and interior_point(simplified) else original
+
+
+def prepare_feature(feature):
+    feature["rings"] = [ring for raw in feature.get("rings", []) if (ring := close_ring(raw))]
+    feature["bounds"] = [bbox(ring) for ring in feature["rings"]]
+    if not feature.get("point") and feature["rings"]:
+        feature["point"] = interior_point(feature["rings"][0])
+    return feature
+
+
+def assemble_rings(way_refs, ways):
+    chains = [list(ways[ref]) for ref in way_refs if ref in ways and len(ways[ref]) >= 2]
+    rings = []
+    while chains:
+        chain = chains.pop(0)
+        while chain[0] != chain[-1]:
+            for index, candidate in enumerate(chains):
+                if chain[-1] == candidate[0]: chain.extend(candidate[1:])
+                elif chain[-1] == candidate[-1]: chain.extend(reversed(candidate[:-1]))
+                elif chain[0] == candidate[-1]: chain = candidate[:-1] + chain
+                elif chain[0] == candidate[0]: chain = list(reversed(candidate[1:])) + chain
+                else: continue
+                chains.pop(index); break
+            else: break
+        if ring := close_ring(chain):
+            rings.append(ring)
+    return rings
+
+
+_OSMBase = osmium.SimpleHandler if osmium else object
+
+
+class OSMCollector(_OSMBase):
+    def __init__(self):
+        super().__init__()
+        self.places, self.ways, self.way_features, self.relation_features = [], {}, [], []
+        self.skipped_relation_rings = 0
+        self.needed_way_refs = None
+
+    @staticmethod
+    def feature_tags(tags):
+        name, place_type = tags.get("name"), tags.get("place")
+        is_admin = tags.get("boundary") == "administrative" and tags.get("admin_level") in ADMIN_LEVELS
+        if not name or (place_type not in SETTLEMENT_SET and not is_admin):
+            return None
+        return {"name": name, "place_type": place_type or "administrative_boundary", "admin_level": tags.get("admin_level"),
+                "iso": tags.get("ISO3166-2") or tags.get("ref:IN") or tags.get("state_code")}
+
+    def node(self, node):
+        if feature := self.feature_tags(node.tags):
+            if node.location.valid():
+                feature.update({"source": f"node/{node.id}", "point": (node.location.lat, node.location.lon), "rings": []})
+                self.places.append(prepare_feature(feature))
+
+    def way(self, way):
+        points = [(node.location.lat, node.location.lon) for node in way.nodes if node.location.valid()]
+        if self.needed_way_refs is None or way.id in self.needed_way_refs:
+            self.ways[way.id] = points
+        if feature := self.feature_tags(way.tags):
+            feature.update({"source": f"way/{way.id}", "point": None, "rings": [points]})
+            self.way_features.append(prepare_feature(feature))
+
+    def relation(self, relation):
+        feature = self.feature_tags(relation.tags)
+        if not feature or relation.tags.get("type") not in {"multipolygon", "boundary"}:
+            return
+        refs = [member.ref for member in relation.members if member.type == "w" and member.role != "inner"]
+        rings = assemble_rings(refs, self.ways)
+        self.skipped_relation_rings += max(0, len(refs) - len(rings))
+        feature.update({"source": f"relation/{relation.id}", "point": None, "rings": rings})
+        self.relation_features.append(prepare_feature(feature))
+
+
+class RelationIndex(_OSMBase):
+    """First pass: retain only way IDs needed by relevant place/admin relations."""
+    def __init__(self):
+        super().__init__()
+        self.way_refs = set()
+
+    def relation(self, relation):
+        feature = OSMCollector.feature_tags(relation.tags)
+        if feature and relation.tags.get("type") in {"multipolygon", "boundary"}:
+            self.way_refs.update(member.ref for member in relation.members
+                                 if member.type == "w" and member.role != "inner")
+
+
+def find_state(features, state_code):
+    matches = [feature for feature in features if feature["place_type"] == "administrative_boundary"
+               and feature.get("admin_level") == "4" and feature.get("iso") == state_code and feature["rings"]]
+    if not matches:
+        raise ValueError(f"requested state boundary not found or not assemblable: {state_code}")
+    return matches
+
+
+def filter_for_state(features, state_code):
+    states = find_state(features, state_code)
+    def included(feature):
+        return feature in states or (feature.get("point") and any(point_in_feature(feature["point"], state) for state in states))
+    return [feature for feature in features if included(feature)], states
+
+
+def hierarchy(point, admin_features):
+    result = {"state": None, "district": None, "sub_district": None, "state_code": None}
+    if not point: return result
+    for feature in admin_features:
+        if point_in_feature(point, feature):
+            if feature.get("admin_level") == "4":
+                result["state"], result["state_code"] = feature["name"], feature.get("iso")
+            elif feature.get("admin_level") == "5": result["district"] = feature["name"]
+            elif feature.get("admin_level") == "6": result["sub_district"] = feature["name"]
+    return result
 
 
 def format_geometry(ring):
     return ";".join(f"{lat:.7f},{lon:.7f}" for lat, lon in ring)
 
 
-def assemble_rings(way_refs, ways):
-    """Join member ways into explicitly closed outer rings."""
-    chains = [list(ways[ref]) for ref in way_refs if ref in ways and len(ways[ref]) >= 2]
-    rings = []
-    while chains:
-        chain = chains.pop(0)
-        changed = True
-        while changed and chain[0] != chain[-1]:
-            changed = False
-            for index, candidate in enumerate(chains):
-                if chain[-1] == candidate[0]:
-                    chain.extend(candidate[1:])
-                elif chain[-1] == candidate[-1]:
-                    chain.extend(reversed(candidate[:-1]))
-                elif chain[0] == candidate[-1]:
-                    chain = candidate[:-1] + chain
-                elif chain[0] == candidate[0]:
-                    chain = list(reversed(candidate[1:])) + chain
-                else:
-                    continue
-                chains.pop(index)
-                changed = True
-                break
-        ring = close_ring(chain)
-        if ring:
-            rings.append(ring)
-    return rings
-
-
-class OSMCollector(osmium.SimpleHandler):
-    def __init__(self):
-        super().__init__()
-        self.places = []
-        self.ways = {}
-        self.way_features = []
-        self.relation_features = []
-
-    @staticmethod
-    def feature_tags(tags):
-        name = tags.get("name")
-        place_type = tags.get("place")
-        is_admin = tags.get("boundary") == "administrative" and tags.get("admin_level") in ADMIN_LEVELS
-        if not name or (place_type not in SETTLEMENT_TYPES and not is_admin):
-            return None
-        return {"name": name, "place_type": place_type or "administrative_boundary",
-                "admin_level": tags.get("admin_level"), "iso": tags.get("ISO3166-2") or tags.get("ref:IN") or tags.get("state_code")}
-
-    def node(self, node):
-        feature = self.feature_tags(node.tags)
-        if feature and node.location.valid():
-            feature.update({"source": f"node/{node.id}", "point": (node.location.lat, node.location.lon), "rings": []})
-            self.places.append(feature)
-
-    def way(self, way):
-        points = []
-        for node in way.nodes:
-            if node.location.valid():
-                points.append((node.location.lat, node.location.lon))
-        self.ways[way.id] = points
-        feature = self.feature_tags(way.tags)
-        if feature:
-            feature.update({"source": f"way/{way.id}", "point": None, "rings": [close_ring(points)] if close_ring(points) else []})
-            self.way_features.append(feature)
-
-    def relation(self, relation):
-        feature = self.feature_tags(relation.tags)
-        if not feature or relation.tags.get("type") not in {"multipolygon", "boundary"}:
-            return
-        outer_refs = [member.ref for member in relation.members if member.type == "w" and member.role != "inner"]
-        feature.update({"source": f"relation/{relation.id}", "point": None, "rings": assemble_rings(outer_refs, self.ways)})
-        self.relation_features.append(feature)
-
-
-def representative_point(feature):
-    if feature["point"]:
-        return feature["point"]
-    if feature["rings"]:
-        ring = feature["rings"][0][:-1]
-        return (sum(point[0] for point in ring) / len(ring), sum(point[1] for point in ring) / len(ring))
-    return None
-
-
-def hierarchy(point, admin_features):
-    result = {"state": None, "district": None, "sub_district": None, "state_code": None}
-    if not point:
-        return result
-    matches = []
-    for feature in admin_features:
-        if any(contains(ring, *point) for ring in feature["rings"]):
-            matches.append(feature)
-    # Smaller administrative levels take precedence within their category.
-    for feature in sorted(matches, key=lambda item: int(item["admin_level"] or 0), reverse=True):
-        level = int(feature["admin_level"] or 0)
-        if level <= 5 and not result["state"]:
-            result["state"], result["state_code"] = feature["name"], feature["iso"]
-        elif level == 6 and not result["district"]:
-            result["district"] = feature["name"]
-        elif level >= 7 and not result["sub_district"]:
-            result["sub_district"] = feature["name"]
-    return result
-
-
 def create_database(path, pack_id, pack_name, version, features, tolerance):
-    connection = sqlite3.connect(path)
-    cursor = connection.cursor()
-    cursor.executescript("""
-        PRAGMA journal_mode=OFF;
-        PRAGMA synchronous=OFF;
-        CREATE TABLE pack_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
-        CREATE TABLE place (
-            id INTEGER PRIMARY KEY, name TEXT NOT NULL, place_type TEXT NOT NULL,
-            sub_district TEXT, district TEXT, state TEXT, state_code TEXT,
-            latitude REAL, longitude REAL
-        );
-        CREATE TABLE place_geometry (id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL, geometry TEXT NOT NULL,
-            FOREIGN KEY(place_id) REFERENCES place(id));
-        CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_lng, max_lng);
-    """)
-    cursor.executemany("INSERT INTO pack_meta(key, value) VALUES (?, ?)", [
-        ("schema_version", "3"), ("pack_id", pack_id), ("pack_name", pack_name), ("pack_version", str(version)),
-    ])
-    admin_features = [feature for feature in features if feature["place_type"] == "administrative_boundary"]
-    geometry_id = 1
+    connection = sqlite3.connect(path); cursor = connection.cursor()
+    cursor.executescript("""PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
+CREATE TABLE pack_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
+CREATE TABLE place (id INTEGER PRIMARY KEY, name TEXT NOT NULL, place_type TEXT NOT NULL, sub_district TEXT, district TEXT, state TEXT, state_code TEXT, latitude REAL, longitude REAL);
+CREATE TABLE place_geometry (id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL, geometry TEXT NOT NULL, FOREIGN KEY(place_id) REFERENCES place(id));
+CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_lng, max_lng);""")
+    cursor.executemany("INSERT INTO pack_meta VALUES (?, ?)", [("schema_version", "3"), ("pack_id", pack_id), ("pack_name", pack_name), ("pack_version", str(version))])
+    admins = [feature for feature in features if feature["place_type"] == "administrative_boundary"]; geometry_id = 1
     for place_id, feature in enumerate(features, 1):
-        point = representative_point(feature)
-        fields = hierarchy(point, admin_features)
-        cursor.execute("INSERT INTO place VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                       (place_id, feature["name"], feature["place_type"], fields["sub_district"], fields["district"],
-                        fields["state"], fields["state_code"], point[0] if point else None, point[1] if point else None))
+        point = feature.get("point"); fields = hierarchy(point, admins)
+        cursor.execute("INSERT INTO place VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (place_id, feature["name"], feature["place_type"], fields["sub_district"], fields["district"], fields["state"], fields["state_code"], point[0] if point else None, point[1] if point else None))
         for ring in feature["rings"]:
-            ring = simplify_ring(ring, tolerance)
-            if not ring:
-                continue
+            if not (ring := simplify_ring(ring, tolerance)): continue
             min_lat, max_lat, min_lng, max_lng = bbox(ring)
             cursor.execute("INSERT INTO place_geometry VALUES (?, ?, ?)", (geometry_id, place_id, format_geometry(ring)))
-            cursor.execute("INSERT INTO place_geometry_rtree VALUES (?, ?, ?, ?, ?)",
-                           (geometry_id, min_lat, max_lat, min_lng, max_lng))
-            geometry_id += 1
-    connection.commit()
-    cursor.execute("VACUUM")
-    connection.close()
+            cursor.execute("INSERT INTO place_geometry_rtree VALUES (?, ?, ?, ?, ?)", (geometry_id, min_lat, max_lat, min_lng, max_lng)); geometry_id += 1
+    connection.commit(); cursor.execute("VACUUM"); connection.close()
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pbf", required=True, help="Tamil Nadu or India .osm.pbf input")
-    parser.add_argument("--output", required=True, help="Output SQLite pack path (must not already exist)")
-    parser.add_argument("--pack-id", default="TN")
-    parser.add_argument("--pack-name", default="Tamil Nadu")
-    parser.add_argument("--version", type=int, default=3)
-    parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees; default is roughly 17 m")
+    parser.add_argument("--pbf", required=True); parser.add_argument("--output", required=True); parser.add_argument("--pack-id", default="TN"); parser.add_argument("--pack-name", default="Tamil Nadu"); parser.add_argument("--version", type=int, default=3); parser.add_argument("--state-code"); parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees, roughly 17 m")
     args = parser.parse_args()
-    start = time.monotonic()
-    if args.version != 3:
-        parser.error("schema-v3 builder requires --version 3")
-    if os.path.exists(args.output):
-        parser.error(f"output already exists: {args.output} (choose a new path)")
-    output_parent = os.path.dirname(os.path.abspath(args.output))
-    if output_parent:
-        os.makedirs(output_parent, exist_ok=True)
-    collector = OSMCollector()
+    if osmium is None: parser.error("missing dependency 'osmium'; install with: python3 -m pip install osmium")
+    if args.version != 3: parser.error("schema-v3 builder requires --version 3")
+    if os.path.exists(args.output): parser.error(f"output already exists: {args.output}")
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    # A lightweight relation pass prevents retaining coordinates for every
+    # Southern-Zone way; the location-enabled pass retains only outer members of
+    # useful place/admin relations plus direct tagged ways.
+    start = time.monotonic(); relation_index = RelationIndex(); relation_index.apply_file(args.pbf)
+    collector = OSMCollector(); collector.needed_way_refs = relation_index.way_refs
     collector.apply_file(args.pbf, locations=True)
     features = collector.places + collector.way_features + collector.relation_features
+    if args.state_code:
+        try: features, _ = filter_for_state(features, args.state_code)
+        except ValueError as error: parser.error(str(error))
     create_database(args.output, args.pack_id, args.pack_name, args.version, features, args.simplify_tolerance)
-    print(f"Built {args.output}: {len(features)} places in {time.monotonic() - start:.1f}s")
-
+    print(f"Built {args.output}: {len(features)} places in {time.monotonic()-start:.1f}s; tolerance={args.simplify_tolerance}; skipped relation rings={collector.skipped_relation_rings}")
 
 if __name__ == "__main__":
     main()

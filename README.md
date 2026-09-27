@@ -17,12 +17,20 @@ Install the one non-standard Python dependency (the SQLite support is in Python)
 python3 -m pip install osmium
 ```
 
-Acquire a Tamil Nadu extract (or an India extract) from an OSM extract provider
-and keep it outside Git, for example at `source/osm/tamil-nadu.osm.pbf`.  Then:
+LocalTell does not need a Tamil-Nadu-specific download. Acquire a larger Southern
+India extract and keep it outside Git; the builder finds the OSM
+`boundary=administrative`, `admin_level=4`, `ISO3166-2=IN-TN` boundary and filters
+the pack to Tamil Nadu.
 
 ```sh
-python3 scripts/build_geographic_pack.py --pbf source/osm/tamil-nadu.osm.pbf --output output/TN.db --pack-id TN --pack-name "Tamil Nadu" --version 3
-python3 scripts/validate_geographic_pack.py output/TN.db
+python3 scripts/build_geographic_pack.py \
+  --pbf source/osm/southern-zone-latest.osm.pbf \
+  --output output/TN.db \
+  --pack-id TN \
+  --pack-name "Tamil Nadu" \
+  --version 3 \
+  --state-code IN-TN
+python3 scripts/validate_geographic_pack.py output/TN.db --expected-state-code IN-TN --expected-pack-id TN
 python3 scripts/test_locality_lookup.py output/TN.db --lat 8.18300 --lon 77.34500
 gzip -k output/TN.db
 ```
@@ -33,7 +41,13 @@ a GitHub Release manually.  The scripts never download data or publish releases.
 
 The builder accepts OSM `place` nodes/ways/relations for `city`, `town`,
 `village`, `hamlet`, `suburb`, `neighbourhood`, and `locality`; it also retains
-named administrative boundaries for hierarchy context.  Administrative polygons
-are used to populate state, district, and taluk/sub-district fields when a place
-has a representative coordinate.  Polygon geometry is stored as simplified,
-explicitly closed latitude/longitude rings, with one outer ring per geometry row.
+named administrative boundaries for hierarchy context. India mapping is level 4
+state/UT, level 5 district, and level 6 taluk/subdistrict. Polygon geometry is
+simplified at the documented default 0.00015 degrees and explicitly closed.
+Multipolygon outer rings become separate rows. Inner holes are not encoded because
+the current Android single-ring point-in-polygon contract cannot represent them.
+
+Polygon matches are deterministic: neighbourhood, suburb, locality, hamlet,
+village, town, city, then administrative boundaries (with smaller geometry as the
+admin tie-break). Nearest fallback accepts only those seven settlement types and
+uses Haversine distance; it never returns an administrative boundary.

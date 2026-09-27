@@ -24,6 +24,11 @@ The npm commands are thin wrappers over Python scripts. Publishing is the only
 command that contacts GitHub. Cleanup previews by default; pass --confirm only
 after independently verifying published assets.
 
+`npm run data:validate -- <PACK_ID>` already verifies supported place types,
+the configured level-4 state boundary and its geometry, and explicitly coded
+foreign level-4 boundaries. One-off SQLite queries are useful for troubleshooting
+failed packs, not required as routine release validation.
+
 ## Tamil Nadu schema-v3 geographic pack
 
 The schema-v3 pack resolves a GNSS coordinate against offline OpenStreetMap

@@ -94,6 +94,26 @@ class GeographicPackTests(unittest.TestCase):
         self.assertEqual({"Tamil Nadu": "4", "Kanniyakumari": "5", "Kalkulam": "6", "Village": None}, levels)
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_validator_rejects_unsupported_type_and_foreign_level_four(self):
+        target = feature("Karnataka", "administrative_boundary", "4", "IN-KA", STATE)
+        foreign = feature("Maharashtra", "administrative_boundary", "4", "IN-MH", DISTRICT)
+        with tempfile.TemporaryDirectory() as directory:
+            database = os.path.join(directory, "KA.db")
+            pack.create_database(database, "KA", "Karnataka", 3, [target, foreign], 0.00015)
+            validator = os.path.join(os.path.dirname(__file__), "..", "scripts", "validate_geographic_pack.py")
+            foreign_result = subprocess.run([sys.executable, validator, database, "--expected-state-code", "IN-KA", "--expected-pack-id", "KA"], text=True, capture_output=True, check=False)
+            connection = sqlite3.connect(database)
+            try:
+                connection.execute("UPDATE place SET place_type='state', state_code='IN-KA' WHERE name='Maharashtra'")
+                connection.commit()
+            finally:
+                connection.close()
+            type_result = subprocess.run([sys.executable, validator, database, "--expected-state-code", "IN-KA", "--expected-pack-id", "KA"], text=True, capture_output=True, check=False)
+        self.assertNotEqual(0, foreign_result.returncode)
+        self.assertIn("foreign level-4", foreign_result.stderr)
+        self.assertNotEqual(0, type_result.returncode)
+        self.assertIn("unsupported place types", type_result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

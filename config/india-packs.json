@@ -4,11 +4,13 @@
     "southern-zone": "source/southern-zone-latest.osm.pbf"
   },
   "packs": [
-    {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "KA", "name": "Karnataka", "stateCode": "IN-KA", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "AP", "name": "Andhra Pradesh", "stateCode": "IN-AP", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "TS", "name": "Telangana", "stateCode": "IN-TS", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "PY", "name": "Puducherry", "stateCode": "IN-PY", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true}
+    {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "displayOrder": 2, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "KA", "name": "Karnataka", "stateCode": "IN-KA", "region": "south", "displayOrder": 3, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "AP", "name": "Andhra Pradesh", "stateCode": "IN-AP", "region": "south", "displayOrder": 4, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "TS", "name": "Telangana", "stateCode": "IN-TS", "region": "south", "displayOrder": 5, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "PY", "name": "Puducherry", "stateCode": "IN-PY", "region": "south", "displayOrder": 6, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "AN", "name": "Andaman and Nicobar Islands", "stateCode": "IN-AN", "region": "south", "displayOrder": 7, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "LD", "name": "Lakshadweep", "stateCode": "IN-LD", "region": "south", "displayOrder": 8, "source": "southern-zone", "packVersion": 3, "enabled": true}
   ]
 }

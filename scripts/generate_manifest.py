@@ -7,9 +7,12 @@ def manifest(config):
     for pack in enabled_packs(config):
         database, archive = output / f"{pack['id']}.db", output / f"{pack['id']}.db.gz"
         if not database.is_file() or not archive.is_file(): raise ValueError(f"missing packaged files for {pack['id']}")
-        with sqlite3.connect(database) as db:
+        db = sqlite3.connect(database)
+        try:
             places = db.execute("SELECT count(*) FROM place").fetchone()[0]; geometries = db.execute("SELECT count(*) FROM place_geometry").fetchone()[0]
-        entries.append({"id": pack["id"], "name": pack["name"], "version": pack["packVersion"],
+        finally:
+            db.close()
+        entries.append({"id": pack["id"], "name": pack["name"], "version": pack["packVersion"], "region": pack["region"], "displayOrder": pack["displayOrder"],
             "downloadUrl": f"https://github.com/actionanand/localtell-data/releases/download/{RELEASE_TAG}/{pack['id']}.db.gz",
             "sha256": sha256(archive), "compressedBytes": archive.stat().st_size, "uncompressedBytes": database.stat().st_size,
             "_places": places, "_geometries": geometries})

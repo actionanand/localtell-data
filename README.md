@@ -29,6 +29,13 @@ the configured level-4 state boundary and its geometry, and explicitly coded
 foreign level-4 boundaries. One-off SQLite queries are useful for troubleshooting
 failed packs, not required as routine release validation.
 
+Manifest `region` is a stable machine-readable grouping key. `displayOrder`
+controls pack ordering within that region; the Android client calculates regional
+download/install totals from each pack's existing compressedBytes and
+uncompressedBytes fields rather than receiving precomputed regional totals.
+Manifest ordering is deterministic, but Android/UI region ordering is a client
+presentation concern and must not depend on alphabetical region names.
+
 ## Tamil Nadu schema-v3 geographic pack
 
 The schema-v3 pack resolves a GNSS coordinate against offline OpenStreetMap

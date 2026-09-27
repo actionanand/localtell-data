@@ -12,3 +12,7 @@ source/opencellid/*.csv
 source/opencellid/*.csv.gz
 source/osm/*.pbf
 source/osm/*.zip
+
+# Python cache
+__pycache__/
+*.py[cod]

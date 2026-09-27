@@ -905,7 +905,420 @@ local hash == published hash
 
 ---
 
-# 24. Android End-to-End Test
+
+# 24. Testing Published Data on Another Machine (No Source PBF Required)
+
+You can test an already-published LocalTell state pack on a completely different machine **without** downloading the original Geofabrik `.osm.pbf` source file.
+
+For published-pack testing, you only need:
+
+```text
+localtell-data repository
++
+published manifest.json
++
+published <STATE>.db.gz
+```
+
+The large source file such as:
+
+```text
+southern-zone-latest.osm.pbf
+```
+
+is required only when **building or rebuilding** a state pack.
+
+It is **not required** for:
+
+```text
+downloading a published pack
+verifying its SHA-256
+decompressing it
+running locality lookup tests
+testing outside_pack behavior
+```
+
+This makes it easy to verify a GitHub Release from another computer.
+
+---
+
+## 24.1 Example: Test Karnataka on a Fresh Machine
+
+The following example uses Karnataka (`KA`).
+
+### Step 1 — Clone the data repository
+
+```bash
+git clone https://github.com/actionanand/localtell-data.git
+cd localtell-data
+```
+
+The repository provides the test script:
+
+```text
+scripts/test_locality_lookup.py
+```
+
+No Geofabrik source PBF is needed for this test.
+
+---
+
+### Step 2 — Create a temporary test directory
+
+```bash
+mkdir -p ~/localtell-published-test
+cd ~/localtell-published-test
+```
+
+---
+
+### Step 3 — Download the published manifest
+
+```bash
+curl -L \
+  -o manifest.json \
+  https://github.com/actionanand/localtell-data/releases/download/cell-data-v3/manifest.json
+```
+
+Inspect it:
+
+```bash
+python -m json.tool manifest.json
+```
+
+Confirm that it contains:
+
+```text
+KA — Karnataka
+version = 3
+```
+
+---
+
+### Step 4 — Download Karnataka
+
+```bash
+curl -L \
+  -o KA.db.gz \
+  https://github.com/actionanand/localtell-data/releases/download/cell-data-v3/KA.db.gz
+```
+
+---
+
+### Step 5 — Verify the downloaded SHA-256 against the manifest
+
+Run:
+
+```bash
+python - <<'PY'
+import hashlib
+import json
+from pathlib import Path
+
+manifest = json.loads(Path("manifest.json").read_text(encoding="utf-8"))
+pack = next(p for p in manifest["packs"] if p["id"] == "KA")
+
+path = Path("KA.db.gz")
+actual = hashlib.sha256(path.read_bytes()).hexdigest()
+expected = pack["sha256"]
+
+print("Pack:", pack["id"], "-", pack["name"])
+print("Expected:", expected)
+print("Actual:  ", actual)
+print("MATCH:", actual == expected)
+
+if actual != expected:
+    raise SystemExit("SHA-256 mismatch")
+PY
+```
+
+Expected:
+
+```text
+MATCH: True
+```
+
+For the currently published Karnataka pack, the expected SHA-256 is:
+
+```text
+2361a02efb852c4988bf7faa010d7e3b3d2b56ba1c7c8290cb72e6b9f4020888
+```
+
+The manifest should be treated as the normal source of the expected hash, so future pack revisions do not require changing the test command.
+
+---
+
+### Step 6 — Decompress the database
+
+Keep the downloaded `.gz` file and create a separate SQLite DB:
+
+```bash
+gzip -dc KA.db.gz > KA.db
+```
+
+Check that both files exist:
+
+```bash
+ls -lh KA.db.gz KA.db
+```
+
+---
+
+### Step 7 — Validate the downloaded DB with LocalTell tooling
+
+Return to the cloned repository and run the geographic validator directly against the downloaded DB.
+
+For example, if the repository was cloned to:
+
+```text
+~/localtell-data
+```
+
+run:
+
+```bash
+cd ~/localtell-data
+
+python scripts/validate_geographic_pack.py \
+  ~/localtell-published-test/KA.db \
+  --expected-state-code IN-KA \
+  --expected-pack-id KA
+```
+
+Expected:
+
+```text
+VALID: schema-v3, ...
+```
+
+This validates the actual database downloaded from GitHub rather than a locally built copy.
+
+---
+
+### Step 8 — Test a Karnataka coordinate
+
+From the cloned repository:
+
+```bash
+python scripts/test_locality_lookup.py \
+  ~/localtell-published-test/KA.db \
+  --lat 12.9716 \
+  --lon 77.5946
+```
+
+This is a Bengaluru test.
+
+Expected:
+
+```text
+state: Karnataka
+state_code: IN-KA
+```
+
+The exact neighbourhood/locality can change when OSM data is rebuilt in the future, so the important checks are:
+
+```text
+a locality resolves
+state = Karnataka
+state_code = IN-KA
+resolution_method is not outside_pack
+```
+
+---
+
+### Step 9 — Test a coordinate outside Karnataka
+
+Test Hosur in Tamil Nadu:
+
+```bash
+python scripts/test_locality_lookup.py \
+  ~/localtell-published-test/KA.db \
+  --lat 12.7409 \
+  --lon 77.8253
+```
+
+Expected:
+
+```text
+resolution_method: outside_pack
+```
+
+This proves that the published Karnataka DB does not incorrectly resolve a nearby Tamil Nadu coordinate.
+
+---
+
+## 24.2 One-Block Karnataka Published-Pack Test
+
+After cloning the repository, the essential verification can be run as:
+
+```bash
+mkdir -p ~/localtell-published-test
+cd ~/localtell-published-test
+
+curl -L \
+  -o manifest.json \
+  https://github.com/actionanand/localtell-data/releases/download/cell-data-v3/manifest.json
+
+curl -L \
+  -o KA.db.gz \
+  https://github.com/actionanand/localtell-data/releases/download/cell-data-v3/KA.db.gz
+
+python - <<'PY'
+import hashlib
+import json
+from pathlib import Path
+
+manifest = json.loads(Path("manifest.json").read_text(encoding="utf-8"))
+pack = next(p for p in manifest["packs"] if p["id"] == "KA")
+actual = hashlib.sha256(Path("KA.db.gz").read_bytes()).hexdigest()
+
+print("Expected:", pack["sha256"])
+print("Actual:  ", actual)
+
+if actual != pack["sha256"]:
+    raise SystemExit("SHA-256 mismatch")
+
+print("SHA-256 OK")
+PY
+
+gzip -dc KA.db.gz > KA.db
+
+cd ~/localtell-data
+
+python scripts/validate_geographic_pack.py \
+  ~/localtell-published-test/KA.db \
+  --expected-state-code IN-KA \
+  --expected-pack-id KA
+
+python scripts/test_locality_lookup.py \
+  ~/localtell-published-test/KA.db \
+  --lat 12.9716 \
+  --lon 77.5946
+
+python scripts/test_locality_lookup.py \
+  ~/localtell-published-test/KA.db \
+  --lat 12.7409 \
+  --lon 77.8253
+```
+
+Expected overall result:
+
+```text
+SHA-256 OK
+
+Karnataka coordinate
+→ resolves inside Karnataka
+
+Hosur / Tamil Nadu coordinate
+→ outside_pack
+```
+
+---
+
+## 24.3 Replicate the Same Test for Another State
+
+Only four values need to change:
+
+```text
+PACK_ID
+STATE_CODE
+inside-state coordinate
+outside-state coordinate
+```
+
+Example mapping:
+
+| Pack | State / UT | State code |
+|---|---|---|
+| `TN` | Tamil Nadu | `IN-TN` |
+| `KL` | Kerala | `IN-KL` |
+| `KA` | Karnataka | `IN-KA` |
+| `AP` | Andhra Pradesh | `IN-AP` |
+| `TS` | Telangana | `IN-TS` |
+| `PY` | Puducherry | `IN-PY` |
+
+For example, to test Andhra Pradesh:
+
+```text
+KA.db.gz
+→ AP.db.gz
+
+KA.db
+→ AP.db
+
+IN-KA
+→ IN-AP
+```
+
+Then use one Andhra Pradesh coordinate and one coordinate known to be outside Andhra Pradesh.
+
+---
+
+## 24.4 Optional: Download with GitHub CLI
+
+If GitHub CLI is already installed, the same release asset can be downloaded with:
+
+```bash
+gh release download cell-data-v3 \
+  --repo actionanand/localtell-data \
+  --pattern "KA.db.gz" \
+  --dir ~/localtell-published-test
+```
+
+The manifest can be downloaded with:
+
+```bash
+gh release download cell-data-v3 \
+  --repo actionanand/localtell-data \
+  --pattern "manifest.json" \
+  --dir ~/localtell-published-test
+```
+
+Because `localtell-data` is public, authentication is not required when using the direct `curl` release URLs.
+
+---
+
+## 24.5 What This Fresh-Machine Test Proves
+
+This test verifies a different part of the pipeline from the build-machine test.
+
+Build machine:
+
+```text
+Geofabrik PBF
+    ↓
+builder
+    ↓
+local DB
+    ↓
+package
+    ↓
+publish
+```
+
+Fresh test machine:
+
+```text
+GitHub Release
+    ↓
+manifest
+    ↓
+download .db.gz
+    ↓
+SHA-256 verification
+    ↓
+decompress
+    ↓
+validate DB
+    ↓
+locality lookup
+```
+
+If the fresh-machine test passes, it proves that the published artifact is independently usable and does not depend on the original build workspace or Geofabrik PBF.
+
+---
+
+# 25. Android End-to-End Test
 
 After GitHub publishing is verified, test the actual Android app.
 
@@ -1006,7 +1419,7 @@ PY disconnected territories
 
 ---
 
-# 25. Android Multi-Pack Resolver Test
+# 26. Android Multi-Pack Resolver Test
 
 The resolver should:
 
@@ -1044,7 +1457,7 @@ Kerala
 
 ---
 
-# 26. Offline Test
+# 27. Offline Test
 
 After packs are installed:
 
@@ -1064,7 +1477,7 @@ Internet should be required only for downloading/updating pack data, not for nor
 
 ---
 
-# 27. Regression Checklist
+# 28. Regression Checklist
 
 Before considering a release complete:
 
@@ -1114,7 +1527,7 @@ Before considering a release complete:
 
 ---
 
-# 28. Current South India Release Status
+# 29. Current South India Release Status
 
 The current validated South India rollout is:
 
@@ -1137,7 +1550,7 @@ Release assets have been compared against local packaged files using SHA-256 and
 
 ---
 
-# 29. Final Test Rule
+# 30. Final Test Rule
 
 A LocalTell state pack is considered fully tested only when all of the following are true:
 

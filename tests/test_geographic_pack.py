@@ -41,6 +41,22 @@ class GeographicPackTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "state boundary"):
             pack.filter_for_state([feature("Elsewhere", "village", point=(8, 77))], "IN-TN")
 
+    def test_admin_boundary_with_place_state_is_normalized(self):
+        result = pack.OSMCollector.feature_tags({"name": "Maharashtra", "place": "state", "boundary": "administrative", "admin_level": "4", "ISO3166-2": "IN-MH"})
+        self.assertIsNotNone(result)
+        self.assertEqual("administrative_boundary", result["place_type"])
+        self.assertEqual("4", result["admin_level"])
+        self.assertEqual("IN-MH", result["iso"])
+
+    def test_foreign_level_four_boundary_is_excluded(self):
+        target_ring = [(10, 70), (10, 80), (20, 80), (20, 70), (10, 70)]
+        target = feature("Karnataka", "administrative_boundary", "4", "IN-KA", target_ring)
+        # Deliberately give the foreign state a representative point inside KA.
+        foreign = feature("Maharashtra", "administrative_boundary", "4", "IN-MH", point=(15, 75))
+        village = feature("Karnataka village", "village", point=(15, 75))
+        filtered, _ = pack.filter_for_state([target, foreign, village], "IN-KA")
+        self.assertEqual({"Karnataka", "Karnataka village"}, {item["name"] for item in filtered})
+
     def test_polygon_priority_and_nearest_excludes_admin(self):
         state = feature("Tamil Nadu", "administrative_boundary", "4", "IN-TN", STATE)
         district = feature("Kanniyakumari", "administrative_boundary", "5", ring=DISTRICT)

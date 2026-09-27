@@ -160,7 +160,7 @@ class OSMCollector(_OSMBase):
         is_admin = tags.get("boundary") == "administrative" and tags.get("admin_level") in ADMIN_LEVELS
         if not name or (place_type not in SETTLEMENT_SET and not is_admin):
             return None
-        return {"name": name, "place_type": place_type or "administrative_boundary", "admin_level": tags.get("admin_level"),
+        return {"name": name, "place_type": place_type if place_type in SETTLEMENT_SET else "administrative_boundary", "admin_level": tags.get("admin_level"),
                 "iso": tags.get("ISO3166-2") or tags.get("ref:IN") or tags.get("state_code")}
 
     def node(self, node):
@@ -212,7 +212,13 @@ def find_state(features, state_code):
 def filter_for_state(features, state_code):
     states = find_state(features, state_code)
     def included(feature):
-        return feature in states or (feature.get("point") and any(point_in_feature(feature["point"], state) for state in states))
+        if feature in states:
+            return True
+        # A foreign state/UT may have an interior point inside the requested
+        # state near a border. It is never hierarchy data for this pack.
+        if feature["place_type"] == "administrative_boundary" and feature.get("admin_level") == "4":
+            return False
+        return feature.get("point") and any(point_in_feature(feature["point"], state) for state in states)
     return [feature for feature in features if included(feature)], states
 
 

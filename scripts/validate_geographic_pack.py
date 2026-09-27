@@ -76,6 +76,11 @@ def main():
             WHERE p.place_type='administrative_boundary' AND p.admin_level='4' AND p.state_code=?""", (args.expected_state_code,)).fetchone()[0]
         if not state_extent:
             sys.exit(f"no level-4 administrative boundary geometry with state_code {args.expected_state_code}")
+        foreign_level4 = cursor.execute("""SELECT COUNT(*) FROM place
+            WHERE place_type='administrative_boundary' AND admin_level='4'
+              AND state_code IS NOT NULL AND state_code != ?""", (args.expected_state_code,)).fetchone()[0]
+        if foreign_level4:
+            sys.exit(f"{foreign_level4} foreign level-4 administrative boundaries found")
         wrong_codes = cursor.execute("SELECT COUNT(*) FROM place WHERE state_code IS NOT NULL AND state_code != ?", (args.expected_state_code,)).fetchone()[0]
         if wrong_codes:
             sys.exit(f"{wrong_codes} populated state_code values differ from {args.expected_state_code}")

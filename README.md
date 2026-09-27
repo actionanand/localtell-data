@@ -41,13 +41,16 @@ a GitHub Release manually.  The scripts never download data or publish releases.
 
 The builder accepts OSM `place` nodes/ways/relations for `city`, `town`,
 `village`, `hamlet`, `suburb`, `neighbourhood`, and `locality`; it also retains
-named administrative boundaries for hierarchy context. India mapping is level 4
+named administrative boundaries for hierarchy context. The schema-v3 `place`
+table persists OSM `admin_level`: level 4 state/UT boundaries define the pack
+extent, level 5 is district, and level 6 is taluk/subdistrict. India mapping is level 4
 state/UT, level 5 district, and level 6 taluk/subdistrict. Polygon geometry is
 simplified at the documented default 0.00015 degrees and explicitly closed.
 Multipolygon outer rings become separate rows. Inner holes are not encoded because
 the current Android single-ring point-in-polygon contract cannot represent them.
 
-Polygon matches are deterministic: neighbourhood, suburb, locality, hamlet,
-village, town, city, then administrative boundaries (with smaller geometry as the
-admin tie-break). Nearest fallback accepts only those seven settlement types and
-uses Haversine distance; it never returns an administrative boundary.
+Before lookup, the resolver confirms the coordinate is inside a level-4 state
+boundary. Outside coordinates return no result from that pack. Polygon matches
+are deterministic: neighbourhood, suburb, locality, hamlet, village, town, city.
+Administrative boundaries are extent/hierarchy data only. Nearest fallback accepts
+only those seven settlement types and uses Haversine distance.

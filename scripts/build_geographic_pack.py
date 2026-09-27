@@ -235,14 +235,14 @@ def create_database(path, pack_id, pack_name, version, features, tolerance):
     connection = sqlite3.connect(path); cursor = connection.cursor()
     cursor.executescript("""PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
 CREATE TABLE pack_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
-CREATE TABLE place (id INTEGER PRIMARY KEY, name TEXT NOT NULL, place_type TEXT NOT NULL, sub_district TEXT, district TEXT, state TEXT, state_code TEXT, latitude REAL, longitude REAL);
+CREATE TABLE place (id INTEGER PRIMARY KEY, name TEXT NOT NULL, place_type TEXT NOT NULL, admin_level TEXT NULL, sub_district TEXT, district TEXT, state TEXT, state_code TEXT, latitude REAL, longitude REAL);
 CREATE TABLE place_geometry (id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL, geometry TEXT NOT NULL, FOREIGN KEY(place_id) REFERENCES place(id));
 CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_lng, max_lng);""")
     cursor.executemany("INSERT INTO pack_meta VALUES (?, ?)", [("schema_version", "3"), ("pack_id", pack_id), ("pack_name", pack_name), ("pack_version", str(version))])
     admins = [feature for feature in features if feature["place_type"] == "administrative_boundary"]; geometry_id = 1
     for place_id, feature in enumerate(features, 1):
         point = feature.get("point"); fields = hierarchy(point, admins)
-        cursor.execute("INSERT INTO place VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (place_id, feature["name"], feature["place_type"], fields["sub_district"], fields["district"], fields["state"], fields["state_code"], point[0] if point else None, point[1] if point else None))
+        cursor.execute("INSERT INTO place VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (place_id, feature["name"], feature["place_type"], feature.get("admin_level"), fields["sub_district"], fields["district"], fields["state"], fields["state_code"], point[0] if point else None, point[1] if point else None))
         for ring in feature["rings"]:
             if not (ring := simplify_ring(ring, tolerance)): continue
             min_lat, max_lat, min_lng, max_lng = bbox(ring)

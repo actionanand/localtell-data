@@ -6,7 +6,7 @@ import sqlite3
 import sys
 
 REQUIRED = {"pack_meta", "place", "place_geometry", "place_geometry_rtree"}
-PLACE_COLUMNS = {"id", "name", "place_type", "sub_district", "district", "state", "state_code", "latitude", "longitude"}
+PLACE_COLUMNS = {"id", "name", "place_type", "admin_level", "sub_district", "district", "state", "state_code", "latitude", "longitude"}
 REQUIRED_META = {"schema_version", "pack_id", "pack_name", "pack_version"}
 SETTLEMENT_TYPES = {"neighbourhood", "suburb", "locality", "hamlet", "village", "town", "city"}
 
@@ -71,6 +71,11 @@ def main():
         if lat is None or lon is None or not all(math.isfinite(value) for value in (lat, lon)) or not (-90 <= lat <= 90 and -180 <= lon <= 180):
             sys.exit(f"malformed representative coordinate for place {place_id}")
     if args.expected_state_code:
+        state_extent = cursor.execute("""SELECT COUNT(*) FROM place p
+            JOIN place_geometry g ON g.place_id=p.id
+            WHERE p.place_type='administrative_boundary' AND p.admin_level='4' AND p.state_code=?""", (args.expected_state_code,)).fetchone()[0]
+        if not state_extent:
+            sys.exit(f"no level-4 administrative boundary geometry with state_code {args.expected_state_code}")
         wrong_codes = cursor.execute("SELECT COUNT(*) FROM place WHERE state_code IS NOT NULL AND state_code != ?", (args.expected_state_code,)).fetchone()[0]
         if wrong_codes:
             sys.exit(f"{wrong_codes} populated state_code values differ from {args.expected_state_code}")
@@ -80,7 +85,9 @@ def main():
     invalid_types = cursor.execute("SELECT DISTINCT place_type FROM place WHERE place_type NOT IN ('administrative_boundary','neighbourhood','suburb','locality','hamlet','village','town','city')").fetchall()
     if invalid_types:
         sys.exit(f"unsupported place types: {invalid_types}")
-    print(f"VALID: schema-v3, {geometry_count} geometry rows, {cursor.execute('SELECT COUNT(*) FROM place').fetchone()[0]} places")
+    place_count = cursor.execute("SELECT COUNT(*) FROM place").fetchone()[0]
+    db.close()
+    print(f"VALID: schema-v3, {geometry_count} geometry rows, {place_count} places")
 
 
 if __name__ == "__main__":

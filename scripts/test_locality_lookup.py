@@ -8,7 +8,7 @@ SETTLEMENT_TYPES = ("neighbourhood", "suburb", "locality", "hamlet", "village", 
 PRIORITY_SQL = """CASE p.place_type
  WHEN 'neighbourhood' THEN 1 WHEN 'suburb' THEN 2 WHEN 'locality' THEN 3
  WHEN 'hamlet' THEN 4 WHEN 'village' THEN 5 WHEN 'town' THEN 6
- WHEN 'city' THEN 7 WHEN 'administrative_boundary' THEN 8 ELSE 99 END"""
+ WHEN 'city' THEN 7 ELSE 99 END"""
 
 def parse_ring(value):
     return [tuple(map(float, pair.split(","))) for pair in value.split(";")]
@@ -38,11 +38,20 @@ def main():
     args = parser.parse_args()
     if not (-90 <= args.lat <= 90 and -180 <= args.lon <= 180): parser.error("coordinates are outside latitude/longitude bounds")
     db = sqlite3.connect(args.database); db.create_function("haversine", 4, distance_meters); cursor = db.cursor()
+    state_rings = cursor.execute("""SELECT g.geometry FROM place_geometry_rtree r
+JOIN place_geometry g ON g.id=r.id JOIN place p ON p.id=g.place_id
+WHERE r.min_lat<=? AND r.max_lat>=? AND r.min_lng<=? AND r.max_lng>=?
+  AND p.place_type='administrative_boundary' AND p.admin_level='4'
+ORDER BY r.id""", (args.lat,args.lat,args.lon,args.lon)).fetchall()
+    if not any(contains(parse_ring(row[0]), args.lat, args.lon) for row in state_rings):
+        print("resolution_method: outside_pack")
+        return
     # Tie-break by smaller RTree bounding-box area, then stable ids. This means
     # a taluk beats district/state if no user-facing locality matches.
     candidates = cursor.execute(f"""SELECT p.name,p.place_type,p.sub_district,p.district,p.state,p.state_code,g.geometry
 FROM place_geometry_rtree r JOIN place_geometry g ON g.id=r.id JOIN place p ON p.id=g.place_id
 WHERE r.min_lat<=? AND r.max_lat>=? AND r.min_lng<=? AND r.max_lng>=?
+  AND p.place_type IN ('neighbourhood','suburb','locality','hamlet','village','town','city')
 ORDER BY {PRIORITY_SQL}, ((r.max_lat-r.min_lat)*(r.max_lng-r.min_lng)), p.id, g.id""", (args.lat,args.lat,args.lon,args.lon)).fetchall()
     for row in candidates:
         if contains(parse_ring(row[6]), args.lat, args.lon):

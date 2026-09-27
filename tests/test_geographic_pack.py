@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -51,11 +52,31 @@ class GeographicPackTests(unittest.TestCase):
             pack.create_database(database, "TN", "Tamil Nadu", 3, [state, district, village, neighbourhood, outside], 0.00015)
             helper = os.path.join(os.path.dirname(__file__), "..", "scripts", "test_locality_lookup.py")
             polygon = subprocess.check_output([sys.executable, helper, database, "--lat", "8.2", "--lon", "77.2"], text=True)
-            nearest = subprocess.check_output([sys.executable, helper, database, "--lat", "10.45", "--lon", "80.45"], text=True)
+            nearest = subprocess.check_output([sys.executable, helper, database, "--lat", "8.8", "--lon", "77.8"], text=True)
+            outside_pack = subprocess.check_output([sys.executable, helper, database, "--lat", "10.45", "--lon", "80.45"], text=True)
         self.assertIn("name: Neighbourhood", polygon)
         self.assertIn("resolution_method: polygon", polygon)
-        self.assertIn("name: Fallback town", nearest)
+        self.assertIn("name: Village", nearest)
         self.assertIn("resolution_method: nearest_place_fallback", nearest)
+        self.assertEqual("resolution_method: outside_pack\n", outside_pack)
+
+    def test_admin_levels_are_persisted_and_tn_extent_validates(self):
+        features = [feature("Tamil Nadu", "administrative_boundary", "4", "IN-TN", STATE),
+                    feature("Kanniyakumari", "administrative_boundary", "5", ring=DISTRICT),
+                    feature("Kalkulam", "administrative_boundary", "6", ring=TALUK),
+                    feature("Village", "village", point=(8.2, 77.2))]
+        with tempfile.TemporaryDirectory() as directory:
+            database = os.path.join(directory, "TN.db")
+            pack.create_database(database, "TN", "Tamil Nadu", 3, features, 0.00015)
+            connection = sqlite3.connect(database)
+            try:
+                levels = dict(connection.execute("SELECT name, admin_level FROM place"))
+            finally:
+                connection.close()
+            validator = os.path.join(os.path.dirname(__file__), "..", "scripts", "validate_geographic_pack.py")
+            result = subprocess.run([sys.executable, validator, database, "--expected-state-code", "IN-TN", "--expected-pack-id", "TN"], text=True, capture_output=True, check=False)
+        self.assertEqual({"Tamil Nadu": "4", "Kanniyakumari": "5", "Kalkulam": "6", "Village": None}, levels)
+        self.assertEqual(0, result.returncode, result.stderr)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,10 @@
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true}
+    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "KA", "name": "Karnataka", "stateCode": "IN-KA", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "AP", "name": "Andhra Pradesh", "stateCode": "IN-AP", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "TS", "name": "Telangana", "stateCode": "IN-TS", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "PY", "name": "Puducherry", "stateCode": "IN-PY", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true}
   ]
 }

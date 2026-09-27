@@ -1,0 +1,10 @@
+{
+  "workspace": "~/localtell-osm-work",
+  "sources": {
+    "southern-zone": "source/southern-zone-latest.osm.pbf"
+  },
+  "packs": [
+    {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "source": "southern-zone", "packVersion": 3, "enabled": true}
+  ]
+}

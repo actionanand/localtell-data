@@ -1,0 +1,15 @@
+{
+  "name": "localtell-data-tools",
+  "private": true,
+  "scripts": {
+    "data:build": "python scripts/build_state.py",
+    "data:validate": "python scripts/validate_state.py",
+    "data:package": "python scripts/package_state.py",
+    "data:manifest": "python scripts/generate_manifest.py",
+    "data:publish": "python scripts/publish_release.py",
+    "data:cleanup": "python scripts/cleanup_workspace.py",
+    "data:build:region": "python scripts/build_region.py",
+    "data:build:all": "python scripts/build_region.py all",
+    "data:test": "python -m unittest discover -s tests -v"
+  }
+}

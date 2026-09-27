@@ -15,6 +15,7 @@ except ImportError:  # Unit tests can exercise geometry/database code without th
 SETTLEMENT_TYPES = ("neighbourhood", "suburb", "locality", "hamlet", "village", "town", "city")
 SETTLEMENT_SET = set(SETTLEMENT_TYPES)
 ADMIN_LEVELS = {"4", "5", "6", "7", "8"}
+SCHEMA_VERSION = 3
 
 
 def valid_point(point):
@@ -238,7 +239,7 @@ CREATE TABLE pack_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
 CREATE TABLE place (id INTEGER PRIMARY KEY, name TEXT NOT NULL, place_type TEXT NOT NULL, admin_level TEXT NULL, sub_district TEXT, district TEXT, state TEXT, state_code TEXT, latitude REAL, longitude REAL);
 CREATE TABLE place_geometry (id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL, geometry TEXT NOT NULL, FOREIGN KEY(place_id) REFERENCES place(id));
 CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_lng, max_lng);""")
-    cursor.executemany("INSERT INTO pack_meta VALUES (?, ?)", [("schema_version", "3"), ("pack_id", pack_id), ("pack_name", pack_name), ("pack_version", str(version))])
+    cursor.executemany("INSERT INTO pack_meta VALUES (?, ?)", [("schema_version", str(SCHEMA_VERSION)), ("pack_id", pack_id), ("pack_name", pack_name), ("pack_version", str(version))])
     admins = [feature for feature in features if feature["place_type"] == "administrative_boundary"]; geometry_id = 1
     for place_id, feature in enumerate(features, 1):
         point = feature.get("point"); fields = hierarchy(point, admins)
@@ -253,10 +254,9 @@ CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pbf", required=True); parser.add_argument("--output", required=True); parser.add_argument("--pack-id", default="TN"); parser.add_argument("--pack-name", default="Tamil Nadu"); parser.add_argument("--version", type=int, default=3); parser.add_argument("--state-code"); parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees, roughly 17 m")
+    parser.add_argument("--pbf", required=True); parser.add_argument("--output", required=True); parser.add_argument("--pack-id", default="TN"); parser.add_argument("--pack-name", default="Tamil Nadu"); parser.add_argument("--pack-version", "--version", dest="pack_version", type=int, default=3); parser.add_argument("--state-code"); parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees, roughly 17 m")
     args = parser.parse_args()
     if osmium is None: parser.error("missing dependency 'osmium'; install with: python3 -m pip install osmium")
-    if args.version != 3: parser.error("schema-v3 builder requires --version 3")
     if os.path.exists(args.output): parser.error(f"output already exists: {args.output}")
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     # A lightweight relation pass prevents retaining coordinates for every
@@ -269,7 +269,7 @@ def main():
     if args.state_code:
         try: features, _ = filter_for_state(features, args.state_code)
         except ValueError as error: parser.error(str(error))
-    create_database(args.output, args.pack_id, args.pack_name, args.version, features, args.simplify_tolerance)
+    create_database(args.output, args.pack_id, args.pack_name, args.pack_version, features, args.simplify_tolerance)
     print(f"Built {args.output}: {len(features)} places in {time.monotonic()-start:.1f}s; tolerance={args.simplify_tolerance}; skipped relation rings={collector.skipped_relation_rings}")
 
 if __name__ == "__main__":

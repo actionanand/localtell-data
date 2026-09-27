@@ -4,6 +4,26 @@ Offline cellular locality data packs for LocalTell.
 
 Runtime packs are distributed through GitHub Releases rather than committed to Git history.
 
+## WSL2 state-pack automation
+
+Schema version is fixed at SQLite schema-v3; each state has a separate pack
+version. Adding a state remains part of the cell-data-v3 release and does not
+create a new release generation. Configure states in config/india-packs.json;
+large inputs and outputs live under ~/localtell-osm-work.
+
+```sh
+conda activate wsl2
+npm run data:build -- KL
+npm run data:validate -- KL
+npm run data:package -- KL
+npm run data:manifest
+npm run data:publish
+```
+
+The npm commands are thin wrappers over Python scripts. Publishing is the only
+command that contacts GitHub. Cleanup previews by default; pass --confirm only
+after independently verifying published assets.
+
 ## Tamil Nadu schema-v3 geographic pack
 
 The schema-v3 pack resolves a GNSS coordinate against offline OpenStreetMap

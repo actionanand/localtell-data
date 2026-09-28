@@ -6,6 +6,8 @@ import os
 import sqlite3
 import sys
 import time
+from pathlib import Path
+from progress_logging import ProgressReporter
 
 try:
     import osmium
@@ -258,25 +260,47 @@ CREATE VIRTUAL TABLE place_geometry_rtree USING rtree(id, min_lat, max_lat, min_
     connection.commit(); cursor.execute("VACUUM"); connection.close()
 
 
+def collect_features(pbf, progress=None):
+    """Parse an OSM PBF once and return reusable feature records plus diagnostics."""
+    if osmium is None:
+        raise RuntimeError("missing dependency 'osmium'; install with: python3 -m pip install osmium")
+    progress = progress or ProgressReporter()
+    with progress.phase("Relation-index pass"):
+        relation_index = RelationIndex(); relation_index.apply_file(pbf)
+    progress.line(f"[{progress.label}] Relation-index references: {len(relation_index.way_refs)}")
+    collector = OSMCollector(); collector.needed_way_refs = relation_index.way_refs
+    with progress.phase("Main feature/geometry collection pass"):
+        collector.apply_file(pbf, locations=True)
+    progress.line(f"[{progress.label}] Collected places={len(collector.places)}, ways={len(collector.way_features)}, relations={len(collector.relation_features)}")
+    return collector.places + collector.way_features + collector.relation_features, collector.skipped_relation_rings
+
+
+def build_pack_from_features(features, output, pack_id, pack_name, state_code, pack_version, tolerance=0.00015, progress=None):
+    """Filter one state/UT and write its pack from an already collected PBF."""
+    progress = progress or ProgressReporter()
+    with progress.phase("Filtering"):
+        filtered, _ = filter_for_state(features, state_code)
+    progress.line(f"[{progress.label}] Retained features: {len(filtered)}")
+    with progress.phase("DB writing"):
+        create_database(output, pack_id, pack_name, pack_version, filtered, tolerance)
+    return len(filtered)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pbf", required=True); parser.add_argument("--output", required=True); parser.add_argument("--pack-id", default="TN"); parser.add_argument("--pack-name", default="Tamil Nadu"); parser.add_argument("--pack-version", "--version", dest="pack_version", type=int, default=3); parser.add_argument("--state-code"); parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees, roughly 17 m")
+    parser.add_argument("--pbf", required=True); parser.add_argument("--output", required=True); parser.add_argument("--pack-id", default="TN"); parser.add_argument("--pack-name", default="Tamil Nadu"); parser.add_argument("--pack-version", "--version", dest="pack_version", type=int, default=3); parser.add_argument("--state-code"); parser.add_argument("--progress", action="store_true"); parser.add_argument("--simplify-tolerance", type=float, default=0.00015, help="Degrees, roughly 17 m")
     args = parser.parse_args()
     if osmium is None: parser.error("missing dependency 'osmium'; install with: python3 -m pip install osmium")
     if os.path.exists(args.output): parser.error(f"output already exists: {args.output}")
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    # A lightweight relation pass prevents retaining coordinates for every
-    # Southern-Zone way; the location-enabled pass retains only outer members of
-    # useful place/admin relations plus direct tagged ways.
-    start = time.monotonic(); relation_index = RelationIndex(); relation_index.apply_file(args.pbf)
-    collector = OSMCollector(); collector.needed_way_refs = relation_index.way_refs
-    collector.apply_file(args.pbf, locations=True)
-    features = collector.places + collector.way_features + collector.relation_features
-    if args.state_code:
-        try: features, _ = filter_for_state(features, args.state_code)
-        except ValueError as error: parser.error(str(error))
-    create_database(args.output, args.pack_id, args.pack_name, args.pack_version, features, args.simplify_tolerance)
-    print(f"Built {args.output}: {len(features)} places in {time.monotonic()-start:.1f}s; tolerance={args.simplify_tolerance}; skipped relation rings={collector.skipped_relation_rings}")
+    start = time.monotonic()
+    try:
+        reporter = ProgressReporter(args.progress, Path(args.pbf).stem)
+        features, skipped = collect_features(args.pbf, reporter)
+        count = build_pack_from_features(features, args.output, args.pack_id, args.pack_name, args.state_code, args.pack_version, args.simplify_tolerance, reporter) if args.state_code else (create_database(args.output, args.pack_id, args.pack_name, args.pack_version, features, args.simplify_tolerance) or len(features))
+    except (RuntimeError, ValueError) as error:
+        parser.error(str(error))
+    print(f"Built {args.output}: {count} places in {time.monotonic()-start:.1f}s; tolerance={args.simplify_tolerance}; skipped relation rings={skipped}")
 
 if __name__ == "__main__":
     main()

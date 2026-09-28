@@ -1,7 +1,8 @@
 {
   "workspace": "~/localtell-osm-work",
   "sources": {
-    "southern-zone": "source/southern-zone-latest.osm.pbf"
+    "southern-zone": "source/southern-zone-latest.osm.pbf",
+    "western-zone": "source/western-zone-latest.osm.pbf"
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
@@ -11,6 +12,46 @@
     {"id": "TS", "name": "Telangana", "stateCode": "IN-TS", "region": "south", "displayOrder": 5, "source": "southern-zone", "packVersion": 3, "enabled": true},
     {"id": "PY", "name": "Puducherry", "stateCode": "IN-PY", "region": "south", "displayOrder": 6, "source": "southern-zone", "packVersion": 3, "enabled": true},
     {"id": "AN", "name": "Andaman and Nicobar Islands", "stateCode": "IN-AN", "region": "south", "displayOrder": 7, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "LD", "name": "Lakshadweep", "stateCode": "IN-LD", "region": "south", "displayOrder": 8, "source": "southern-zone", "packVersion": 3, "enabled": true}
+    {"id": "LD", "name": "Lakshadweep", "stateCode": "IN-LD", "region": "south", "displayOrder": 8, "source": "southern-zone", "packVersion": 3, "enabled": true},
+    {
+    "id": "MH",
+    "name": "Maharashtra",
+    "stateCode": "IN-MH",
+    "region": "west",
+    "displayOrder": 1,
+    "source": "western-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "GJ",
+    "name": "Gujarat",
+    "stateCode": "IN-GJ",
+    "region": "west",
+    "displayOrder": 2,
+    "source": "western-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "GA",
+    "name": "Goa",
+    "stateCode": "IN-GA",
+    "region": "west",
+    "displayOrder": 3,
+    "source": "western-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "DH",
+    "name": "Dadra and Nagar Haveli and Daman and Diu",
+    "stateCode": "IN-DH",
+    "region": "west",
+    "displayOrder": 4,
+    "source": "western-zone",
+    "packVersion": 3,
+    "enabled": true
+  }
   ]
 }

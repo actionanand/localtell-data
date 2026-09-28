@@ -4,7 +4,7 @@ from state_tools import find_pack, load_config, source_path, workspace_paths
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("pack_id"); parser.add_argument("--force", action="store_true"); parser.add_argument("--config")
+    parser.add_argument("pack_id"); parser.add_argument("--force", action="store_true"); parser.add_argument("--progress", action="store_true"); parser.add_argument("--config")
     args = parser.parse_args(); config = load_config(args.config); pack = find_pack(config, args.pack_id)
     if not pack["enabled"]: parser.error(f"pack {args.pack_id} is disabled")
     _, _, output, _ = workspace_paths(config); pbf = source_path(config, pack); database = output / f"{pack['id']}.db"
@@ -15,6 +15,7 @@ def main():
     command = [sys.executable, str(__import__("pathlib").Path(__file__).with_name("build_geographic_pack.py")),
         "--pbf", str(pbf), "--output", str(database), "--pack-id", pack["id"], "--pack-name", pack["name"],
         "--state-code", pack["stateCode"], "--pack-version", str(pack["packVersion"])]
+    if args.progress: command.append("--progress")
     print("Running:", " ".join(command)); subprocess.run(command, check=True)
 
 if __name__ == "__main__": main()

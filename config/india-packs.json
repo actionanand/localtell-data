@@ -3,7 +3,8 @@
   "sources": {
     "southern-zone": "source/southern-zone-latest.osm.pbf",
     "western-zone": "source/western-zone-latest.osm.pbf",
-    "central-zone": "source/central-zone-latest.osm.pbf"
+    "central-zone": "source/central-zone-latest.osm.pbf",
+    "northern-zone": "source/northern-zone-latest.osm.pbf"
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
@@ -91,6 +92,86 @@
     "region": "central",
     "displayOrder": 4,
     "source": "central-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "RJ",
+    "name": "Rajasthan",
+    "stateCode": "IN-RJ",
+    "region": "north",
+    "displayOrder": 1,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "PB",
+    "name": "Punjab",
+    "stateCode": "IN-PB",
+    "region": "north",
+    "displayOrder": 2,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "HR",
+    "name": "Haryana",
+    "stateCode": "IN-HR",
+    "region": "north",
+    "displayOrder": 3,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "HP",
+    "name": "Himachal Pradesh",
+    "stateCode": "IN-HP",
+    "region": "north",
+    "displayOrder": 4,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "CH",
+    "name": "Chandigarh",
+    "stateCode": "IN-CH",
+    "region": "north",
+    "displayOrder": 5,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "DL",
+    "name": "Delhi",
+    "stateCode": "IN-DL",
+    "region": "north",
+    "displayOrder": 6,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "JK",
+    "name": "Jammu and Kashmir",
+    "stateCode": "IN-JK",
+    "region": "north",
+    "displayOrder": 7,
+    "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "LA",
+    "name": "Ladakh",
+    "stateCode": "IN-LA",
+    "region": "north",
+    "displayOrder": 8,
+    "source": "northern-zone",
     "packVersion": 3,
     "enabled": true
   }

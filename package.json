@@ -4,6 +4,7 @@
   "scripts": {
     "data:build": "python scripts/build_state.py",
     "data:validate": "python scripts/validate_state.py",
+    "data:validate:region": "python scripts/validate_region.py",
     "data:package": "python scripts/package_state.py",
     "data:manifest": "python scripts/generate_manifest.py",
     "data:publish": "python scripts/publish_release.py",

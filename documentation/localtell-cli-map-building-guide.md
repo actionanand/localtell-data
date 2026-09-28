@@ -2,7 +2,7 @@
 
 This document describes the repeatable CLI workflow for building LocalTell offline geographic packs from Geofabrik/OpenStreetMap data.
 
-> Updated for efficient one-parse-per-source regional builds and optional terminal progress/heartbeat logging.
+> Updated for efficient one-parse-per-source regional builds, optional terminal progress/heartbeat logging, and regional validation support.
 
 The goal is to support both:
 
@@ -85,6 +85,36 @@ npm run data:build:region -- northeast
 Region membership must come from `config/india-packs.json`. Do **not** hard-code State/UT lists in the Python scripts.
 
 For efficient regional builds, packs sharing the same source PBF should reuse a **single OSM parse**. For example, a West India build should parse `western-zone-latest.osm.pbf` once and then create `MH.db`, `GJ.db`, `GA.db`, and `DH.db` from the collected features.
+
+### Validate a whole region
+
+Individual validation remains available:
+
+```bash
+npm run data:validate -- MH
+```
+
+Regional validation uses the same configured region membership and validates
+every enabled pack independently:
+
+```bash
+npm run data:validate:region -- west
+```
+
+Examples:
+
+```bash
+npm run data:validate:region -- south
+npm run data:validate:region -- west
+npm run data:validate:region -- central
+npm run data:validate:region -- north
+npm run data:validate:region -- east
+npm run data:validate:region -- northeast
+npm run data:validate:region -- all
+```
+
+Regional validation must preserve each region's `displayOrder`, continue after
+an individual pack failure, and return a non-zero exit status if any pack fails.
 
 ### Build all enabled India packs
 
@@ -460,18 +490,27 @@ TN KL KA AP TS PY AN LD
 
 ---
 
-## 9. Validate every pack
+## 9. Validate packs
 
-Validation is always per pack:
+Every generated `.db` remains an independent artifact and must be validated
+independently. The CLI supports both individual and regional validation.
+
+### Validate one pack
 
 ```bash
 npm run data:validate -- MH
+```
+
+Examples:
+
+```bash
 npm run data:validate -- GJ
 npm run data:validate -- GA
 npm run data:validate -- DH
 ```
 
-Validation checks include the schema-v3 database structure and geographic/state safeguards.
+Validation checks include the schema-v3 database structure and the existing
+geographic/state safeguards.
 
 A successful result looks similar to:
 
@@ -480,7 +519,104 @@ VALID: schema-v3, ... geometry rows, ... places
 VALID MH: places=..., geometries=..., pack_version=3
 ```
 
-Do not package or publish a pack that fails validation.
+### Validate a whole region
+
+```bash
+npm run data:validate:region -- west
+```
+
+South India:
+
+```bash
+npm run data:validate:region -- south
+```
+
+Future regions follow the same pattern:
+
+```bash
+npm run data:validate:region -- central
+npm run data:validate:region -- north
+npm run data:validate:region -- east
+npm run data:validate:region -- northeast
+```
+
+To validate every enabled pack:
+
+```bash
+npm run data:validate:region -- all
+```
+
+Region membership must come from `config/india-packs.json`; the validation
+script must not hard-code State/UT lists.
+
+A typical successful regional validation should look similar to:
+
+```text
+Validating region: west
+Packs (4): MH, GJ, GA, DH
+
+[1/4] MH — Maharashtra
+VALID MH: places=..., geometries=..., pack_version=3
+
+[2/4] GJ — Gujarat
+VALID GJ: places=..., geometries=..., pack_version=3
+
+[3/4] GA — Goa
+VALID GA: places=..., geometries=..., pack_version=3
+
+[4/4] DH — Dadra and Nagar Haveli and Daman and Diu
+VALID DH: places=..., geometries=..., pack_version=3
+
+Regional validation complete: 4/4 passed
+```
+
+### Regional failure behavior
+
+Regional validation should continue checking the remaining packs even when one
+pack fails, so one command reports the complete health of the region.
+
+Example:
+
+```text
+[1/4] MH — Maharashtra
+VALID
+
+[2/4] GJ — Gujarat
+FAILED
+
+[3/4] GA — Goa
+VALID
+
+[4/4] DH — Dadra and Nagar Haveli and Daman and Diu
+VALID
+
+Regional validation failed: 3/4 passed
+Failed packs: GJ
+```
+
+A missing `.db` file is also a validation failure and should be reported
+clearly, while validation continues for the remaining packs.
+
+The command must:
+
+- exit `0` when every requested pack passes;
+- exit non-zero when one or more packs fail;
+- preserve configured `displayOrder`;
+- exclude disabled packs;
+- support region names case-insensitively when the regional build does;
+- validate only, without building, packaging, generating a manifest, or publishing.
+
+Do not package or publish any pack that fails validation.
+
+For a normal regional rollout, the preferred sequence is now:
+
+```bash
+npm run data:build:region -- central --progress
+npm run data:validate:region -- central
+```
+
+Packaging is still performed per pack unless/until a separate
+`data:package:region` wrapper is added.
 
 ---
 
@@ -723,8 +859,8 @@ LocalTell currently follows this practical rollout order:
 
 ```text
 1. South India      ✅ completed
-2. West India       ← current
-3. Central India
+2. West India       ✅ completed
+3. Central India    ← current
 4. North India
 5. East India
 6. North-East India
@@ -747,12 +883,14 @@ Keep these rules throughout the India rollout:
 7. Regional builds should parse each unique PBF once for efficiency.
 8. Use `--progress` for long interactive builds when you want phase logs and a heartbeat; do not rely on fake percentage output.
 9. Validate and geographically test every generated pack.
-10. Test disconnected territories individually.
-11. Never publish automatically as part of `data:build`.
-12. Generate and inspect the cumulative manifest before publishing.
-13. Hash-verify newly published files before deleting local build artifacts.
-14. Do not change DB schema, manifest schema, release tag, or pack version merely because a new geographic pack is added.
-15. Do not modify `android-version.json` as part of map-data automation.
+10. Regional validation is only a wrapper: every State/UT DB must still be validated independently underneath.
+11. Regional validation should continue after individual failures and report all failed packs at the end.
+12. Test disconnected territories individually.
+13. Never publish automatically as part of `data:build` or `data:validate:region`.
+14. Generate and inspect the cumulative manifest before publishing.
+15. Hash-verify newly published files before deleting local build artifacts.
+16. Do not change DB schema, manifest schema, release tag, or pack version merely because a new geographic pack is added.
+17. Do not modify `android-version.json` as part of map-data automation.
 
 ---
 
@@ -786,8 +924,14 @@ npm run data:build:region -- west --force
 # Force rebuild with progress
 npm run data:build:region -- west --force --progress
 
-# Validate
+# Validate one pack
 npm run data:validate -- MH
+
+# Validate a whole region
+npm run data:validate:region -- west
+
+# Validate all enabled packs
+npm run data:validate:region -- all
 
 # Package
 npm run data:package -- MH

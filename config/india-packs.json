@@ -2,7 +2,8 @@
   "workspace": "~/localtell-osm-work",
   "sources": {
     "southern-zone": "source/southern-zone-latest.osm.pbf",
-    "western-zone": "source/western-zone-latest.osm.pbf"
+    "western-zone": "source/western-zone-latest.osm.pbf",
+    "central-zone": "source/central-zone-latest.osm.pbf"
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
@@ -50,6 +51,46 @@
     "region": "west",
     "displayOrder": 4,
     "source": "western-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "MP",
+    "name": "Madhya Pradesh",
+    "stateCode": "IN-MP",
+    "region": "central",
+    "displayOrder": 1,
+    "source": "central-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "CG",
+    "name": "Chhattisgarh",
+    "stateCode": "IN-CG",
+    "region": "central",
+    "displayOrder": 2,
+    "source": "central-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "UP",
+    "name": "Uttar Pradesh",
+    "stateCode": "IN-UP",
+    "region": "central",
+    "displayOrder": 3,
+    "source": "central-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "UK",
+    "name": "Uttarakhand",
+    "stateCode": "IN-UK",
+    "region": "central",
+    "displayOrder": 4,
+    "source": "central-zone",
     "packVersion": 3,
     "enabled": true
   }

@@ -5,7 +5,8 @@
     "western-zone": "source/western-zone-latest.osm.pbf",
     "central-zone": "source/central-zone-latest.osm.pbf",
     "northern-zone": "source/northern-zone-latest.osm.pbf",
-    "eastern-zone": "source/eastern-zone-latest.osm.pbf"
+    "eastern-zone": "source/eastern-zone-latest.osm.pbf",
+    "north-eastern-zone": "source/north-eastern-zone-latest.osm.pbf"
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
@@ -213,6 +214,86 @@
     "region": "east",
     "displayOrder": 4,
     "source": "eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "AS",
+    "name": "Assam",
+    "stateCode": "IN-AS",
+    "region": "northeast",
+    "displayOrder": 1,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "AR",
+    "name": "Arunachal Pradesh",
+    "stateCode": "IN-AR",
+    "region": "northeast",
+    "displayOrder": 2,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "MN",
+    "name": "Manipur",
+    "stateCode": "IN-MN",
+    "region": "northeast",
+    "displayOrder": 3,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "ML",
+    "name": "Meghalaya",
+    "stateCode": "IN-ML",
+    "region": "northeast",
+    "displayOrder": 4,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "MZ",
+    "name": "Mizoram",
+    "stateCode": "IN-MZ",
+    "region": "northeast",
+    "displayOrder": 5,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "NL",
+    "name": "Nagaland",
+    "stateCode": "IN-NL",
+    "region": "northeast",
+    "displayOrder": 6,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "SK",
+    "name": "Sikkim",
+    "stateCode": "IN-SK",
+    "region": "northeast",
+    "displayOrder": 7,
+    "source": "north-eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "TR",
+    "name": "Tripura",
+    "stateCode": "IN-TR",
+    "region": "northeast",
+    "displayOrder": 8,
+    "source": "north-eastern-zone",
     "packVersion": 3,
     "enabled": true
   }

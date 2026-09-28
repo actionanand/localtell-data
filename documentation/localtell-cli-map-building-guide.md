@@ -2,6 +2,8 @@
 
 This document describes the repeatable CLI workflow for building LocalTell offline geographic packs from Geofabrik/OpenStreetMap data.
 
+> Updated for efficient one-parse-per-source regional builds and optional terminal progress/heartbeat logging.
+
 The goal is to support both:
 
 - **individual pack builds**, such as `MH`, `TN`, or `GA`;
@@ -92,6 +94,10 @@ npm run data:build:all
 
 The efficient implementation should parse each unique configured Geofabrik source once.
 
+For long-running builds, `--progress` should report the current source, parse
+phase, elapsed time, and per-pack progress. The progress reporter must not cause
+a second PBF parse.
+
 ### Force rebuild
 
 For an individual pack:
@@ -107,6 +113,61 @@ npm run data:build:region -- west --force
 ```
 
 Without `--force`, existing target `.db` files should be treated as an error so they are not overwritten accidentally.
+
+### Show build progress for long-running PBF operations
+
+For long regional builds, use `--progress` so the terminal shows phase changes,
+elapsed time, and a periodic heartbeat instead of appearing idle:
+
+```bash
+npm run data:build:region -- west --progress
+```
+
+South India:
+
+```bash
+npm run data:build:region -- south --progress
+```
+
+Individual builds can use the same option when supported by the current build scripts:
+
+```bash
+npm run data:build -- MH --progress
+```
+
+Progress mode should report truthful build phases rather than a guessed percentage.
+A typical regional build should show:
+
+```text
+[00:00:00] Regional build: west
+[00:00:00] Packs: MH, GJ, GA, DH
+[00:00:00] Source: western-zone-latest.osm.pbf
+
+[00:00:00] [western-zone] Pass 1/2: indexing relation members...
+[00:00:15] [western-zone] Still working... elapsed 15s
+[00:00:30] [western-zone] Still working... elapsed 30s
+[00:01:02] [western-zone] Pass 1/2 complete
+
+[00:01:02] [western-zone] Pass 2/2: collecting places and geometry...
+[00:01:17] [western-zone] Still working... elapsed 15s
+[00:02:31] [western-zone] Collection complete
+
+[00:02:31] [1/4] Building MH — Maharashtra
+[00:02:44] [1/4] Completed MH
+
+[00:02:44] [2/4] Building GJ — Gujarat
+...
+
+[00:03:21] Regional build completed
+            packs: 4
+            unique source PBFs parsed: 1
+            total elapsed: 3m 21s
+```
+
+The heartbeat is only an activity indicator. It should not print one line per OSM
+feature and should not materially slow down parsing.
+
+Without `--progress`, the normal concise build output remains appropriate.
 
 ---
 
@@ -362,6 +423,14 @@ Expected output file:
 
 ### Regional build
 
+Recommended for interactive terminal use:
+
+```bash
+npm run data:build:region -- west --progress
+```
+
+The concise form remains valid:
+
 ```bash
 npm run data:build:region -- west
 ```
@@ -380,7 +449,7 @@ The efficient regional builder should parse the Western Zone PBF once and reuse 
 ### South India example
 
 ```bash
-npm run data:build:region -- south
+npm run data:build:region -- south --progress
 ```
 
 Expected packs:
@@ -676,13 +745,14 @@ Keep these rules throughout the India rollout:
 5. Derive regional membership from `config/india-packs.json`.
 6. Keep individual State/UT databases independent even when using a regional build command.
 7. Regional builds should parse each unique PBF once for efficiency.
-8. Validate and geographically test every generated pack.
-9. Test disconnected territories individually.
-10. Never publish automatically as part of `data:build`.
-11. Generate and inspect the cumulative manifest before publishing.
-12. Hash-verify newly published files before deleting local build artifacts.
-13. Do not change DB schema, manifest schema, release tag, or pack version merely because a new geographic pack is added.
-14. Do not modify `android-version.json` as part of map-data automation.
+8. Use `--progress` for long interactive builds when you want phase logs and a heartbeat; do not rely on fake percentage output.
+9. Validate and geographically test every generated pack.
+10. Test disconnected territories individually.
+11. Never publish automatically as part of `data:build`.
+12. Generate and inspect the cumulative manifest before publishing.
+13. Hash-verify newly published files before deleting local build artifacts.
+14. Do not change DB schema, manifest schema, release tag, or pack version merely because a new geographic pack is added.
+15. Do not modify `android-version.json` as part of map-data automation.
 
 ---
 
@@ -701,11 +771,20 @@ npm run data:build -- MH
 # Regional build
 npm run data:build:region -- west
 
+# Regional build with terminal progress/heartbeat
+npm run data:build:region -- west --progress
+
+# South regional build with progress
+npm run data:build:region -- south --progress
+
 # All enabled packs
 npm run data:build:all
 
 # Force rebuild
 npm run data:build:region -- west --force
+
+# Force rebuild with progress
+npm run data:build:region -- west --force --progress
 
 # Validate
 npm run data:validate -- MH

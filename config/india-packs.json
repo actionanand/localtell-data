@@ -4,7 +4,8 @@
     "southern-zone": "source/southern-zone-latest.osm.pbf",
     "western-zone": "source/western-zone-latest.osm.pbf",
     "central-zone": "source/central-zone-latest.osm.pbf",
-    "northern-zone": "source/northern-zone-latest.osm.pbf"
+    "northern-zone": "source/northern-zone-latest.osm.pbf",
+    "eastern-zone": "source/eastern-zone-latest.osm.pbf"
   },
   "packs": [
     {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
@@ -172,6 +173,46 @@
     "region": "north",
     "displayOrder": 8,
     "source": "northern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "BR",
+    "name": "Bihar",
+    "stateCode": "IN-BR",
+    "region": "east",
+    "displayOrder": 1,
+    "source": "eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "JH",
+    "name": "Jharkhand",
+    "stateCode": "IN-JH",
+    "region": "east",
+    "displayOrder": 2,
+    "source": "eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "OD",
+    "name": "Odisha",
+    "stateCode": "IN-OD",
+    "region": "east",
+    "displayOrder": 3,
+    "source": "eastern-zone",
+    "packVersion": 3,
+    "enabled": true
+  },
+  {
+    "id": "WB",
+    "name": "West Bengal",
+    "stateCode": "IN-WB",
+    "region": "east",
+    "displayOrder": 4,
+    "source": "eastern-zone",
     "packVersion": 3,
     "enabled": true
   }

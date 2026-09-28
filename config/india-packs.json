@@ -9,293 +9,365 @@
     "north-eastern-zone": "source/north-eastern-zone-latest.osm.pbf"
   },
   "packs": [
-    {"id": "TN", "name": "Tamil Nadu", "stateCode": "IN-TN", "region": "south", "displayOrder": 1, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "KL", "name": "Kerala", "stateCode": "IN-KL", "region": "south", "displayOrder": 2, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "KA", "name": "Karnataka", "stateCode": "IN-KA", "region": "south", "displayOrder": 3, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "AP", "name": "Andhra Pradesh", "stateCode": "IN-AP", "region": "south", "displayOrder": 4, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "TS", "name": "Telangana", "stateCode": "IN-TS", "region": "south", "displayOrder": 5, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "PY", "name": "Puducherry", "stateCode": "IN-PY", "region": "south", "displayOrder": 6, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "AN", "name": "Andaman and Nicobar Islands", "stateCode": "IN-AN", "region": "south", "displayOrder": 7, "source": "southern-zone", "packVersion": 3, "enabled": true},
-    {"id": "LD", "name": "Lakshadweep", "stateCode": "IN-LD", "region": "south", "displayOrder": 8, "source": "southern-zone", "packVersion": 3, "enabled": true},
     {
-    "id": "MH",
-    "name": "Maharashtra",
-    "stateCode": "IN-MH",
-    "region": "west",
-    "displayOrder": 1,
-    "source": "western-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "GJ",
-    "name": "Gujarat",
-    "stateCode": "IN-GJ",
-    "region": "west",
-    "displayOrder": 2,
-    "source": "western-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "GA",
-    "name": "Goa",
-    "stateCode": "IN-GA",
-    "region": "west",
-    "displayOrder": 3,
-    "source": "western-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "DH",
-    "name": "Dadra and Nagar Haveli and Daman and Diu",
-    "stateCode": "IN-DH",
-    "region": "west",
-    "displayOrder": 4,
-    "source": "western-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "MP",
-    "name": "Madhya Pradesh",
-    "stateCode": "IN-MP",
-    "region": "central",
-    "displayOrder": 1,
-    "source": "central-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "CG",
-    "name": "Chhattisgarh",
-    "stateCode": "IN-CG",
-    "region": "central",
-    "displayOrder": 2,
-    "source": "central-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "UP",
-    "name": "Uttar Pradesh",
-    "stateCode": "IN-UP",
-    "region": "central",
-    "displayOrder": 3,
-    "source": "central-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "UK",
-    "name": "Uttarakhand",
-    "stateCode": "IN-UK",
-    "region": "central",
-    "displayOrder": 4,
-    "source": "central-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "RJ",
-    "name": "Rajasthan",
-    "stateCode": "IN-RJ",
-    "region": "north",
-    "displayOrder": 1,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "PB",
-    "name": "Punjab",
-    "stateCode": "IN-PB",
-    "region": "north",
-    "displayOrder": 2,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "HR",
-    "name": "Haryana",
-    "stateCode": "IN-HR",
-    "region": "north",
-    "displayOrder": 3,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "HP",
-    "name": "Himachal Pradesh",
-    "stateCode": "IN-HP",
-    "region": "north",
-    "displayOrder": 4,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "CH",
-    "name": "Chandigarh",
-    "stateCode": "IN-CH",
-    "region": "north",
-    "displayOrder": 5,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "DL",
-    "name": "Delhi",
-    "stateCode": "IN-DL",
-    "region": "north",
-    "displayOrder": 6,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "JK",
-    "name": "Jammu and Kashmir",
-    "stateCode": "IN-JK",
-    "region": "north",
-    "displayOrder": 7,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "LA",
-    "name": "Ladakh",
-    "stateCode": "IN-LA",
-    "region": "north",
-    "displayOrder": 8,
-    "source": "northern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "BR",
-    "name": "Bihar",
-    "stateCode": "IN-BR",
-    "region": "east",
-    "displayOrder": 1,
-    "source": "eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "JH",
-    "name": "Jharkhand",
-    "stateCode": "IN-JH",
-    "region": "east",
-    "displayOrder": 2,
-    "source": "eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "OD",
-    "name": "Odisha",
-    "stateCode": "IN-OD",
-    "region": "east",
-    "displayOrder": 3,
-    "source": "eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "WB",
-    "name": "West Bengal",
-    "stateCode": "IN-WB",
-    "region": "east",
-    "displayOrder": 4,
-    "source": "eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "AS",
-    "name": "Assam",
-    "stateCode": "IN-AS",
-    "region": "northeast",
-    "displayOrder": 1,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "AR",
-    "name": "Arunachal Pradesh",
-    "stateCode": "IN-AR",
-    "region": "northeast",
-    "displayOrder": 2,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "MN",
-    "name": "Manipur",
-    "stateCode": "IN-MN",
-    "region": "northeast",
-    "displayOrder": 3,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "ML",
-    "name": "Meghalaya",
-    "stateCode": "IN-ML",
-    "region": "northeast",
-    "displayOrder": 4,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "MZ",
-    "name": "Mizoram",
-    "stateCode": "IN-MZ",
-    "region": "northeast",
-    "displayOrder": 5,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "NL",
-    "name": "Nagaland",
-    "stateCode": "IN-NL",
-    "region": "northeast",
-    "displayOrder": 6,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "SK",
-    "name": "Sikkim",
-    "stateCode": "IN-SK",
-    "region": "northeast",
-    "displayOrder": 7,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  },
-  {
-    "id": "TR",
-    "name": "Tripura",
-    "stateCode": "IN-TR",
-    "region": "northeast",
-    "displayOrder": 8,
-    "source": "north-eastern-zone",
-    "packVersion": 3,
-    "enabled": true
-  }
+      "id": "TN",
+      "name": "Tamil Nadu",
+      "stateCode": "IN-TN",
+      "region": "south",
+      "displayOrder": 1,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "KL",
+      "name": "Kerala",
+      "stateCode": "IN-KL",
+      "region": "south",
+      "displayOrder": 2,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "KA",
+      "name": "Karnataka",
+      "stateCode": "IN-KA",
+      "region": "south",
+      "displayOrder": 3,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "AP",
+      "name": "Andhra Pradesh",
+      "stateCode": "IN-AP",
+      "region": "south",
+      "displayOrder": 4,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "TS",
+      "name": "Telangana",
+      "stateCode": "IN-TS",
+      "region": "south",
+      "displayOrder": 5,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "PY",
+      "name": "Puducherry",
+      "stateCode": "IN-PY",
+      "region": "south",
+      "displayOrder": 6,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "AN",
+      "name": "Andaman and Nicobar Islands",
+      "stateCode": "IN-AN",
+      "region": "south",
+      "displayOrder": 7,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "LD",
+      "name": "Lakshadweep",
+      "stateCode": "IN-LD",
+      "region": "south",
+      "displayOrder": 8,
+      "source": "southern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "MH",
+      "name": "Maharashtra",
+      "stateCode": "IN-MH",
+      "region": "west",
+      "displayOrder": 1,
+      "source": "western-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "GJ",
+      "name": "Gujarat",
+      "stateCode": "IN-GJ",
+      "region": "west",
+      "displayOrder": 2,
+      "source": "western-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "GA",
+      "name": "Goa",
+      "stateCode": "IN-GA",
+      "region": "west",
+      "displayOrder": 3,
+      "source": "western-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "DH",
+      "name": "Dadra and Nagar Haveli and Daman and Diu",
+      "stateCode": "IN-DH",
+      "region": "west",
+      "displayOrder": 4,
+      "source": "western-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "MP",
+      "name": "Madhya Pradesh",
+      "stateCode": "IN-MP",
+      "region": "central",
+      "displayOrder": 1,
+      "source": "central-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "CG",
+      "name": "Chhattisgarh",
+      "stateCode": "IN-CG",
+      "region": "central",
+      "displayOrder": 2,
+      "source": "central-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "UP",
+      "name": "Uttar Pradesh",
+      "stateCode": "IN-UP",
+      "region": "central",
+      "displayOrder": 3,
+      "source": "central-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "UK",
+      "name": "Uttarakhand",
+      "stateCode": "IN-UK",
+      "region": "central",
+      "displayOrder": 4,
+      "source": "central-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "RJ",
+      "name": "Rajasthan",
+      "stateCode": "IN-RJ",
+      "region": "north",
+      "displayOrder": 1,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "PB",
+      "name": "Punjab",
+      "stateCode": "IN-PB",
+      "region": "north",
+      "displayOrder": 2,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "HR",
+      "name": "Haryana",
+      "stateCode": "IN-HR",
+      "region": "north",
+      "displayOrder": 3,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "HP",
+      "name": "Himachal Pradesh",
+      "stateCode": "IN-HP",
+      "region": "north",
+      "displayOrder": 4,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "CH",
+      "name": "Chandigarh",
+      "stateCode": "IN-CH",
+      "region": "north",
+      "displayOrder": 5,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "DL",
+      "name": "Delhi",
+      "stateCode": "IN-DL",
+      "region": "north",
+      "displayOrder": 6,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "JK",
+      "name": "Jammu and Kashmir",
+      "stateCode": "IN-JK",
+      "region": "north",
+      "displayOrder": 7,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "LA",
+      "name": "Ladakh",
+      "stateCode": "IN-LA",
+      "region": "north",
+      "displayOrder": 8,
+      "source": "northern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "BR",
+      "name": "Bihar",
+      "stateCode": "IN-BR",
+      "region": "east",
+      "displayOrder": 1,
+      "source": "eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "JH",
+      "name": "Jharkhand",
+      "stateCode": "IN-JH",
+      "region": "east",
+      "displayOrder": 2,
+      "source": "eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "OD",
+      "name": "Odisha",
+      "stateCode": "IN-OD",
+      "region": "east",
+      "displayOrder": 3,
+      "source": "eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "WB",
+      "name": "West Bengal",
+      "stateCode": "IN-WB",
+      "region": "east",
+      "displayOrder": 4,
+      "source": "eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "AS",
+      "name": "Assam",
+      "stateCode": "IN-AS",
+      "region": "northeast",
+      "displayOrder": 1,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "AR",
+      "name": "Arunachal Pradesh",
+      "stateCode": "IN-AR",
+      "region": "northeast",
+      "displayOrder": 2,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "MN",
+      "name": "Manipur",
+      "stateCode": "IN-MN",
+      "region": "northeast",
+      "displayOrder": 3,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "ML",
+      "name": "Meghalaya",
+      "stateCode": "IN-ML",
+      "region": "northeast",
+      "displayOrder": 4,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "MZ",
+      "name": "Mizoram",
+      "stateCode": "IN-MZ",
+      "region": "northeast",
+      "displayOrder": 5,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "NL",
+      "name": "Nagaland",
+      "stateCode": "IN-NL",
+      "region": "northeast",
+      "displayOrder": 6,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "SK",
+      "name": "Sikkim",
+      "stateCode": "IN-SK",
+      "region": "northeast",
+      "displayOrder": 7,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    },
+    {
+      "id": "TR",
+      "name": "Tripura",
+      "stateCode": "IN-TR",
+      "region": "northeast",
+      "displayOrder": 8,
+      "source": "north-eastern-zone",
+      "packVersion": 3,
+      "enabled": true
+    }
   ]
 }

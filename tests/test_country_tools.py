@@ -30,6 +30,36 @@ class CountryToolsTests(unittest.TestCase):
         tags["ISO3166-2"] = "LK-1"
         self.assertEqual("LK-1", CountryCollector.feature_tags(tags)["iso"])
 
+    def test_country_admin_boundary_prefers_english_name(self):
+        tags = {
+            "name": "Kurunǣgala",
+            "name:en": "Kurunegala District",
+            "boundary": "administrative",
+            "admin_level": "5",
+            "ISO3166-2": "LK-61",
+        }
+        feature = CountryCollector.feature_tags(tags)
+        self.assertEqual("Kurunegala District", feature["name"])
+
+    def test_country_admin_boundary_falls_back_to_default_name(self):
+        tags = {
+            "name": "Example District",
+            "boundary": "administrative",
+            "admin_level": "5",
+            "ISO3166-2": "LK-99",
+        }
+        feature = CountryCollector.feature_tags(tags)
+        self.assertEqual("Example District", feature["name"])
+
+    def test_country_settlement_keeps_default_osm_name(self):
+        tags = {
+            "name": "Local Name",
+            "name:en": "English Name",
+            "place": "village",
+        }
+        feature = CountryCollector.feature_tags(tags)
+        self.assertEqual("Local Name", feature["name"])
+
     def test_province_filter_excludes_other_level_four_extent(self):
         western_ring = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
         eastern_ring = [(1, 1), (1, 3), (3, 3), (3, 1), (1, 1)]

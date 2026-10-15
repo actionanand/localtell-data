@@ -31,12 +31,22 @@ class CountryCollector(_OSM_BASE):
 
     @staticmethod
     def feature_tags(tags):
-        name, place_type = tags.get("name"), tags.get("place")
+        place_type = tags.get("place")
         is_admin = tags.get("boundary") == "administrative" and tags.get("admin_level") in ADMIN_LEVELS
+
+        # Sri Lanka administrative boundaries should use the English OSM name
+        # when available, while settlements retain their normal OSM name.
+        name = (tags.get("name:en") or tags.get("name")) if is_admin else tags.get("name")
+
         if not name or (place_type not in SETTLEMENT_SET and not is_admin):
             return None
-        return {"name": name, "place_type": place_type if place_type in SETTLEMENT_SET else "administrative_boundary",
-                "admin_level": tags.get("admin_level"), "iso": tags.get("ISO3166-2")}
+
+        return {
+            "name": name,
+            "place_type": place_type if place_type in SETTLEMENT_SET else "administrative_boundary",
+            "admin_level": tags.get("admin_level"),
+            "iso": tags.get("ISO3166-2"),
+        }
 
     def node(self, node):
         if (feature := self.feature_tags(node.tags)) and node.location.valid():

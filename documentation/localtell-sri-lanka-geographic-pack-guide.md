@@ -37,3 +37,7 @@ boundary and level 5 is an ISO-approved district. Subdistrict is intentionally
 unavailable and is not populated: levels 6–8 were inspected but are incomplete
 or inconsistent for Sri Lanka. Future countries add their own configuration
 under `config/countries/`; do not assume this hierarchy.
+
+Sri Lanka administrative boundaries prefer OSM `name:en`, falling back to
+`name`; settlements and localities retain ordinary `name`. `ISO3166-2` remains
+the authoritative Province/District identity rather than a display name.

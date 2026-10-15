@@ -521,6 +521,32 @@ administrative_boundary
 
 Unsupported place types are not introduced into the database.
 
+## Administrative and locality naming policy
+
+Sri Lanka administrative boundaries use a display/hierarchy naming policy:
+
+```text
+name:en
+   ↓ if available
+stored administrative display/hierarchy name
+
+otherwise
+
+name
+   ↓
+stored administrative display/hierarchy name
+```
+
+This applies to Province and District boundaries. For example, district `LK-61`
+has `name = Kurunǣgala` and `name:en = Kurunegala District`; LocalTell stores
+`district = Kurunegala District`.
+
+`ISO3166-2` remains the authoritative administrative identity. Names are
+display/hierarchy labels and never replace subdivision codes for identity.
+Settlement and locality records continue to use ordinary OSM `name`, not
+automatically `name:en`, preserving useful local source names such as
+Suduwella, Abhayapura, Wannikulama, and Mailgasthenna. OSM data can evolve.
+
 ---
 
 ## 17. Database schema
@@ -858,6 +884,8 @@ Country-specific tests cover areas such as:
 - ISO subdivision identity;
 - foreign province filtering;
 - hierarchy behavior.
+- administrative boundaries preferring `name:en` with `name` fallback;
+- settlements retaining their standard OSM `name`.
 
 ---
 

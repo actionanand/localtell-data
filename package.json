@@ -11,6 +11,14 @@
     "data:cleanup": "python scripts/cleanup_workspace.py",
     "data:build:region": "python scripts/build_region.py",
     "data:build:all": "python scripts/build_region.py all",
-    "data:test": "python -m unittest discover -s tests -v"
+    "data:test": "python -m unittest discover -s tests -v",
+    "data:lk:download": "python scripts/countries/download_country_source.py",
+    "data:lk:inspect": "python scripts/countries/inspect_country_boundaries.py",
+    "data:lk:build": "python scripts/countries/build_country.py",
+    "data:lk:validate": "python scripts/countries/validate_country.py",
+    "data:lk:package": "python scripts/countries/package_country.py",
+    "data:lk:manifest": "python scripts/countries/generate_country_manifest.py",
+    "data:lk:all": "python scripts/countries/run_country_pipeline.py",
+    "data:lk:test": "python -m unittest discover -s tests -v"
   }
 }

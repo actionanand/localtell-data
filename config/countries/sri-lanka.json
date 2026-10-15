@@ -1,0 +1,19 @@
+{
+  "countryCode": "LK", "countryName": "Sri Lanka", "packType": "province", "expectedDistrictCount": 25,
+  "requiredPackIds": ["LK-1", "LK-2", "LK-3", "LK-4", "LK-5", "LK-6", "LK-7", "LK-8", "LK-9"],
+  "workspace": "~/localtell-osm-work/countries/sri-lanka",
+  "source": {"url":"https://download.geofabrik.de/asia/sri-lanka-latest.osm.pbf", "checksumUrl":"https://download.geofabrik.de/asia/sri-lanka-latest.osm.pbf.md5", "fileName": "sri-lanka-latest.osm.pbf", "checksumFileName": "sri-lanka-latest.osm.pbf.md5"},
+  "hierarchy": {"packBoundaryAdminLevel": "4", "districtAdminLevel": "5", "subDistrictAdminLevel": null},
+  "release": {"repository": "actionanand/localtell-data", "tag": "country-lk-v1", "manifestName": "manifest-LK.json"},
+  "packs": [
+    {"id":"LK-1","name":"Western Province","boundaryCode":"LK-1","districtCodes":["LK-11","LK-12","LK-13"],"displayOrder":1,"packVersion":1,"enabled":true},
+    {"id":"LK-2","name":"Central Province","boundaryCode":"LK-2","districtCodes":["LK-21","LK-22","LK-23"],"displayOrder":2,"packVersion":1,"enabled":true},
+    {"id":"LK-3","name":"Southern Province","boundaryCode":"LK-3","districtCodes":["LK-31","LK-32","LK-33"],"displayOrder":3,"packVersion":1,"enabled":true},
+    {"id":"LK-4","name":"Northern Province","boundaryCode":"LK-4","districtCodes":["LK-41","LK-42","LK-43","LK-44","LK-45"],"displayOrder":4,"packVersion":1,"enabled":true},
+    {"id":"LK-5","name":"Eastern Province","boundaryCode":"LK-5","districtCodes":["LK-51","LK-52","LK-53"],"displayOrder":5,"packVersion":1,"enabled":true},
+    {"id":"LK-6","name":"North Western Province","boundaryCode":"LK-6","districtCodes":["LK-61","LK-62"],"displayOrder":6,"packVersion":1,"enabled":true},
+    {"id":"LK-7","name":"North Central Province","boundaryCode":"LK-7","districtCodes":["LK-71","LK-72"],"displayOrder":7,"packVersion":1,"enabled":true},
+    {"id":"LK-8","name":"Uva Province","boundaryCode":"LK-8","districtCodes":["LK-81","LK-82"],"displayOrder":8,"packVersion":1,"enabled":true},
+    {"id":"LK-9","name":"Sabaragamuwa Province","boundaryCode":"LK-9","districtCodes":["LK-91","LK-92"],"displayOrder":9,"packVersion":1,"enabled":true}
+  ]
+}

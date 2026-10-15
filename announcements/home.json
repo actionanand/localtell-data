@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "announcements": [
+    {
+      "id": "sri-lanka-support-2026-10",
+      "enabled": true,
+      "priority": 100,
+      "publishedAt": "2026-10-15T00:00:00Z",
+      "expiresAt": "2027-01-15T00:00:00Z",
+      "minVersionCode": 31,
+      "title": {
+        "en": "Sri Lanka is now supported",
+        "ta": "இலங்கை ஆதரவு இப்போது கிடைக்கிறது",
+        "sa": "श्रीलङ्कायाः समर्थनम् अधुना उपलब्धम्"
+      },
+      "message": {
+        "en": "Offline locality data is now available for all 9 Sri Lankan Provinces.",
+        "ta": "இலங்கையின் 9 மாகாணங்களுக்கும் இணையமில்லா பகுதி தரவு இப்போது கிடைக்கிறது.",
+        "sa": "श्रीलङ्कायाः सर्वेषां नवप्रान्तानां कृते अन्तर्जालरहित-स्थानीयस्थानदत्तांशः अधुना उपलब्धः अस्ति।"
+      },
+      "action": "offline_data"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
   "announcements": [
     {
       "id": "sri-lanka-support-2026-10",
+      "repeatPolicy": "every_launch",
       "enabled": true,
       "priority": 100,
       "publishedAt": "2026-10-15T00:00:00Z",

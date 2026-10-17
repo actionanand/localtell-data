@@ -121,7 +121,7 @@ Priority examples: `100` for general feature news, `500` for maintenance, `900` 
 
 ## 4. Ready-to-adapt examples (NOT published)
 
-The following are **hypothetical examples only**. They are *individual announcement objects* that could be inserted into the `announcements` array later, **after** the installed client supports the planned fields. All use `"enabled": false` so they are safe to keep as unpublished drafts. Change this to `true` only when the message is accurate and intended for customers. The current published Sri Lanka object should not be replaced with these examples.
+The following are **hypothetical examples only**. They are *individual announcement objects* that could be inserted into the `announcements` array later, **after** the installed client supports the planned fields. Every example includes English (`en`), Tamil (`ta`), and Sanskrit (`sa`) title and message text. All use `"enabled": false` so they are safe to keep as unpublished drafts. Review the translations with fluent speakers before publication, and change `enabled` to `true` only when the message is accurate and intended for customers. The current published Sri Lanka object should not be replaced with these examples.
 
 ### Example A — New geographic-data downloads temporarily unavailable
 
@@ -136,10 +136,14 @@ Use this to tell customers that **downloading new or updated geographic packs is
   "priority": 900,
   "repeatPolicy": "every_launch",
   "title": {
-    "en": "Geographic data downloads temporarily unavailable"
+    "en": "Geographic data downloads temporarily unavailable",
+    "ta": "புவியியல் தரவுப் பதிவிறக்கங்கள் தற்காலிகமாகக் கிடைக்கவில்லை",
+    "sa": "भौगोलिकदत्तांशस्य अवतारणं सम्प्रति न उपलब्धम्"
   },
   "message": {
-    "en": "New geographic data downloads and updates are currently unavailable. You can continue using geographic data already installed on your device."
+    "en": "New geographic data downloads and updates are currently unavailable. You can continue using geographic data already installed on your device.",
+    "ta": "புதிய புவியியல் தரவைப் பதிவிறக்குவதும் புதுப்பிப்பதும் தற்போது முடியவில்லை. உங்கள் சாதனத்தில் ஏற்கெனவே நிறுவப்பட்டுள்ள புவியியல் தரவைத் தொடர்ந்து பயன்படுத்தலாம்.",
+    "sa": "नवीनस्य भौगोलिकदत्तांशस्य अवतारणं तथा अद्यतनीकरणं च सम्प्रति न सम्भवति। स्वयन्त्रे पूर्वमेव स्थापितं भौगोलिकदत्तांशं तु भवन्तः उपयोक्तुं शक्नुवन्ति।"
   },
   "action": "offline_data"
 }
@@ -162,10 +166,14 @@ Use a future notice for an upcoming release. **December 25, 2026 is an example d
   "publishedAt": "2026-12-01T00:00:00Z",
   "expiresAt": "2026-12-25T00:00:00Z",
   "title": {
-    "en": "UAE geographic data is coming December 25"
+    "en": "UAE geographic data is coming December 25",
+    "ta": "ஐக்கிய அரபு அமீரகத்திற்கான புவியியல் தரவு டிசம்பர் 25 அன்று வருகிறது",
+    "sa": "संयुक्त अरब अमीरातदेशस्य भौगोलिकदत्तांशः डिसेम्बर्-मासस्य २५ दिनाङ्के आगमिष्यति"
   },
   "message": {
-    "en": "We are planning to introduce offline geographic data for the United Arab Emirates on December 25, 2026. We'll share an update when it is available."
+    "en": "We are planning to introduce offline geographic data for the United Arab Emirates on December 25, 2026. We'll share an update when it is available.",
+    "ta": "ஐக்கிய அரபு அமீரகத்திற்கான இணையமில்லா புவியியல் தரவை 2026 டிசம்பர் 25 அன்று அறிமுகப்படுத்தத் திட்டமிட்டுள்ளோம். அது கிடைக்கும்போது அறிவிப்போம்.",
+    "sa": "२०२६ वर्षस्य डिसेम्बर्-मासस्य २५ दिनाङ्के संयुक्त अरब अमीरातदेशस्य अन्तर्जालरहितं भौगोलिकदत्तांशं प्रदातुं वयं योजनां कुर्मः। तत् उपलब्धं भवति चेत् सूचयिष्यामः।"
   },
   "action": "none"
 }
@@ -186,10 +194,14 @@ Use a future notice for an upcoming release. **December 25, 2026 is an example d
   "publishedAt": "2026-11-10T00:00:00Z",
   "expiresAt": "2026-11-15T00:00:00Z",
   "title": {
-    "en": "Planned data-service maintenance"
+    "en": "Planned data-service maintenance",
+    "ta": "தரவுச் சேவைக்கான திட்டமிட்ட பராமரிப்பு",
+    "sa": "दत्तांशसेवायाः नियोजितं परिरक्षणम्"
   },
   "message": {
-    "en": "Some geographic-data downloads may be unavailable during scheduled maintenance. Offline data already installed on your device can still be used."
+    "en": "Some geographic-data downloads may be unavailable during scheduled maintenance. Offline data already installed on your device can still be used.",
+    "ta": "திட்டமிட்ட பராமரிப்பின்போது சில புவியியல் தரவுப் பதிவிறக்கங்கள் கிடைக்காமல் போகலாம். உங்கள் சாதனத்தில் ஏற்கெனவே நிறுவப்பட்டுள்ள இணையமில்லா தரவைத் தொடர்ந்து பயன்படுத்தலாம்.",
+    "sa": "नियतपरिरक्षणकाले केषाञ्चन भौगोलिकदत्तांशानाम् अवतारणं न सम्भवेत्। स्वयन्त्रे पूर्वमेव स्थापितम् अन्तर्जालरहितं दत्तांशं तथापि उपयोक्तुं शक्यते।"
   },
   "action": "offline_data"
 }
@@ -208,10 +220,14 @@ The notice dates define **when to show the announcement**, not the exact mainten
   "priority": 100,
   "repeatPolicy": "every_launch",
   "title": {
-    "en": "A new LocalTell feature is on its way"
+    "en": "A new LocalTell feature is on its way",
+    "ta": "LocalTell செயலியில் புதிய வசதி விரைவில் வருகிறது",
+    "sa": "LocalTell इत्यस्य नूतनं वैशिष्ट्यं शीघ्रम् आगमिष्यति"
   },
   "message": {
-    "en": "We're working on an improved experience. We'll announce the feature when it is ready."
+    "en": "We're working on an improved experience. We'll announce the feature when it is ready.",
+    "ta": "மேம்பட்ட அனுபவத்தை உருவாக்கி வருகிறோம். புதிய வசதி தயாரானதும் அறிவிப்போம்.",
+    "sa": "उन्नतानुभवाय वयं कार्यं कुर्मः। नूतनं वैशिष्ट्यं सिद्धं भवति चेत् तस्य घोषणां करिष्यामः।"
   },
   "action": "none"
 }
@@ -228,10 +244,14 @@ The notice dates define **when to show the announcement**, not the exact mainten
   "priority": 1000,
   "repeatPolicy": "every_launch",
   "title": {
-    "en": "LocalTell app migration notice"
+    "en": "LocalTell app migration notice",
+    "ta": "LocalTell செயலி மாற்றம் குறித்த அறிவிப்பு",
+    "sa": "LocalTell अनुप्रयोगस्य स्थानान्तरणसूचना"
   },
   "message": {
-    "en": "We are preparing a new app experience. Please continue using the current LocalTell app until we publish confirmed migration instructions."
+    "en": "We are preparing a new app experience. Please continue using the current LocalTell app until we publish confirmed migration instructions.",
+    "ta": "புதிய செயலி அனுபவத்துக்குத் தயாராகி வருகிறோம். உறுதிப்படுத்தப்பட்ட மாற்ற வழிமுறைகளை வெளியிடும் வரை தற்போதைய LocalTell செயலியையே தொடர்ந்து பயன்படுத்துங்கள்.",
+    "sa": "वयं नूतनस्य अनुप्रयोगस्य अनुभवाय सज्जीभवामः। स्थानान्तरणस्य निश्चितान् निर्देशान् यावत् न प्रकाशयामः, तावत् वर्तमानं LocalTell अनुप्रयोगमेव उपयुञ्जताम्।"
   },
   "action": "none"
 }
@@ -272,7 +292,7 @@ Before activating a notice, confirm:
 - `schemaVersion` is **1** and the JSON syntax is valid (no comments or trailing commas).
 - Each `id` is unique and follows the permitted pattern.
 - `enabled` reflects whether the message is ready to publish.
-- The title and message are accurate; required English text is nonblank; optional translations are reviewed.
+- The title and message are accurate in English, Tamil, and Sanskrit; required English text is nonblank; all supplied translations are reviewed.
 - All times are valid ISO-8601 instants; `expiresAt` is later than `publishedAt` if both exist.
 - Android version-code limits target the intended installed builds, not marketing version names.
 - Priority is appropriate relative to other simultaneously active notices.

@@ -54,8 +54,12 @@ jobs:
       - name: Mirror verified geographic packs (same-origin downloads)
         run: npm run mirror:data
 
-      - name: SPA deep-link fallback
-        run: npm run copy-error-page
+      - name: Browser integration tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+        env:
+          E2E_PACKS: '1'
 
       - uses: actions/upload-pages-artifact@v3
         with:

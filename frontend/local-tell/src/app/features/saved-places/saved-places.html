@@ -48,7 +48,7 @@
             @if (renaming() === view.place.id) {
               <form (submit)="commitRename($event, view.place)" class="row">
                 <label class="visually-hidden" [for]="'rename-' + view.place.id">New name</label>
-                <input [id]="'rename-' + view.place.id" type="text" [formField]="renameForm.name" maxlength="200" [attr.aria-invalid]="renameError() ? 'true' : null" />
+                <input [id]="'rename-' + view.place.id" type="text" [formField]="renameForm.name" [attr.aria-invalid]="renameError() ? 'true' : null" />
                 <button type="submit" class="btn btn-small btn-primary">Save name</button>
                 <button type="button" class="btn btn-small" (click)="renaming.set(null)">Cancel</button>
               </form>

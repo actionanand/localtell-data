@@ -97,7 +97,7 @@
         <form class="row" (submit)="$event.preventDefault(); saveComparison()">
           <div class="field">
             <label for="cmp-label">Optional label</label>
-            <input id="cmp-label" type="text" maxlength="120" [formField]="labelForm.label" placeholder="e.g. VPN Singapore" />
+            <input id="cmp-label" type="text" [formField]="labelForm.label" placeholder="e.g. VPN Singapore" />
           </div>
           <button type="submit" class="btn">Save comparison</button>
         </form>

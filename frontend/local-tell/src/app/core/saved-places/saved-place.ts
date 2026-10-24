@@ -53,6 +53,7 @@ function validText(value: string): boolean {
 /** Kotlin `trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)`; Java `\s` is ASCII-only. */
 function normalize(value: string | null): string {
   return kotlinTrim(value ?? '')
+    // eslint-disable-next-line no-control-regex -- Java `\s` includes VT (\u000B).
     .replace(/[ \t\n\u000B\f\r]+/g, ' ')
     .toLowerCase();
 }
@@ -186,3 +187,17 @@ export function savedPlaceFor(options: {
   };
   return SavedPlaceIdentity.valid(place) ? place : null;
 }
+
+/** Android `SavedPlacesOverflow`: only a Dropbox merge can exceed the limit; saving and sync pause until resolved. */
+export const SavedPlacesOverflow = {
+  excess(count: number, limit: number): number {
+    return Math.max(count - limit, 0);
+  },
+
+  /** The oldest places, i.e. the last entries of the newest-first (`savedAt DESC, id DESC`) list. */
+  oldestToRemove(places: readonly SavedPlace[], limit: number): SavedPlace[] {
+    const excess = SavedPlacesOverflow.excess(places.length, limit);
+    if (excess === 0) return [];
+    return [...places].sort((a, b) => a.savedAt - b.savedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(0, excess);
+  },
+};

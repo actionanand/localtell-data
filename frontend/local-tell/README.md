@@ -30,11 +30,26 @@ configuration is secret.
 ```bash
 npm run develop        # dev server on http://localhost:3041 (proxies /data-mirror to GitHub Releases)
 npm run build          # production build
-npm run build:gh       # production build with base href /localtell-data/ (override with BASE_HREF=/x/)
-npm run mirror:data    # copy manifests + SHA-256-verified packs into dist/.../data-mirror
+npm run build:gh       # production build + 404.html with base href /localtell-data/
+                       # (cross-platform; override with BASE_HREF=/x/ or `npm run build:gh -- --base-href=/x/`)
+npm run mirror:data    # copy manifests + SHA-256-verified packs into dist/.../data-mirror (add `-- --countries=LK` for a subset)
+npm run serve:dist     # serve dist like GitHub Pages at http://localhost:4300/localtell-data/
 npm run lint
-npm run test:ci        # Vitest unit tests (codec golden vectors, backup, resolver, Dropbox policy)
+npm run test:ci        # Vitest unit tests + Node script tests
+npm run e2e            # Playwright browser tests against the served production build
 ```
+
+Browser tests launch Playwright's Chromium (`npx playwright install chromium`). Where Linux browsers
+cannot run (e.g. WSL1), start Windows Chrome with `--remote-debugging-port=9222` and set
+`PW_CDP_ENDPOINT=http://localhost:9222`. Set `E2E_PACKS=1` after `npm run mirror:data` to include
+the real pack download test.
+
+### Android interoperability fixtures
+
+`src/testing/fixtures/android/` holds `.bklt` files written by Android's own `AppBackupCodec.kt`
+(JVM unit-test runtime) plus Android's decode result for a web-written file. The generator test is
+kept as `WebFixtureGeneratorTest.kt.txt`; run it in a scratch copy of the Android repository, not in
+the Android repository itself.
 
 ## Works offline vs needs internet
 
@@ -52,7 +67,7 @@ Decoding never depends on tiles, packs or the network.
 GitHub Release download URLs send no CORS headers (verified with `curl`), so a browser cannot fetch
 them directly. `downloadMirrors` rewrites the exact prefix
 `https://github.com/actionanand/localtell-data/releases/download/` to `data-mirror/` relative to the
-base href. In development `proxy.conf.json` serves that path; on GitHub Pages the workflow runs
+base href. In development `proxy.conf.mjs` serves that path and rewrites GitHub's signed-asset redirects to same-origin paths; on GitHub Pages the workflow runs
 `npm run mirror:data`, which verifies each pack's SHA-256 against the manifest before publishing.
 The client re-verifies SHA-256, decompresses with size bounds, runs `PRAGMA integrity_check` and the
 schema-v3 contract, then activates the pack in one IndexedDB transaction, so a failed or cancelled
@@ -90,6 +105,14 @@ The web app never deletes, renames or overwrites Dropbox files. Uploads use add 
 `strict_conflict`, then download the exact revision to verify it. Retention cleanup is not
 implemented, so backups created here are never removed by the web app. Restores show a preview
 and need confirmation. When local and remote data differ, you choose what happens.
+
+As on Android, a Dropbox merge keeps every unique Saved Place even past the configured limit
+(`maxSavedPlaces`, 30). While Saved Places is over the limit, new saves and Dropbox sync/upload are
+paused; the Dropbox page offers to remove only the oldest extra places after confirmation, or you
+can delete places manually. If a merge commits locally but its follow-up upload fails or Dropbox
+changes meanwhile, the app reports that the merge was applied and the upload is still pending.
+Status is computed from a fresh local snapshot after each upload, so edits made during an upload
+show as "changes not in Dropbox yet".
 
 ## `.bklt` compatibility
 

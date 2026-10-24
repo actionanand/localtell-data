@@ -1,4 +1,4 @@
-import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
+import { computed, DestroyRef, inject, InjectionToken, Service, signal } from '@angular/core';
 import { APP_CONFIG, manifestSources } from '../config/app-config';
 import { describeStorageError, getAll, getSetting, isQuotaError, putSetting, requestToPromise, transaction } from '../storage/idb';
 import { fetchManifestSources, MAX_MANIFEST_BYTES, PackCatalog, parseManifest, type CountryManifestSource, type ManifestFetchResult, type RemoteManifest, type RemotePack } from './pack-manifest';
@@ -19,7 +19,7 @@ export interface PackJob {
   readonly packId: string;
   readonly name: string;
   readonly status: 'queued' | 'running' | 'failed' | 'cancelled';
-  readonly phase: InstallPhase | null;
+  readonly phase: InstallPhase | 'activate' | null;
   readonly percent: number | null;
   readonly error: string | null;
 }
@@ -37,9 +37,32 @@ interface CachedManifest {
 
 const STORAGE_MARGIN_BYTES = 32 * 1024 * 1024;
 
+interface PreparedResult {
+  readonly bytes: ArrayBuffer;
+  readonly validated: ValidatedPack;
+}
+
+interface ActiveInstall {
+  readonly pack: RemotePack;
+  requestId: number | null;
+  cancelRequested: boolean;
+  activating: boolean;
+  settle: { resolve: (value: PreparedResult) => void; reject: (error: Error) => void } | null;
+}
+
+function cancelledError(): Error {
+  return Object.assign(new Error('Download cancelled'), { cancelled: true });
+}
+
+export const PACK_INSTALL_WORKER_FACTORY = new InjectionToken<() => Worker>('PACK_INSTALL_WORKER_FACTORY', {
+  providedIn: 'root',
+  factory: () => () => new Worker(new URL('./pack-install.worker', import.meta.url), { type: 'module' }),
+});
+
 @Service()
 export class PackCatalogService {
   private readonly config = inject(APP_CONFIG);
+  private readonly createWorker = inject(PACK_INSTALL_WORKER_FACTORY);
   private readonly resolver = inject(OfflineLocalityService);
   private readonly selection = inject(LocationSelectionService);
   private readonly catalogState = signal<CatalogState>({ status: 'idle' });
@@ -48,7 +71,8 @@ export class PackCatalogService {
   private readonly storageState = signal<StorageEstimateState>({ usage: null, quota: null, persisted: null });
   private readonly queue: RemotePack[] = [];
   private worker: Worker | null = null;
-  private running: { pack: RemotePack; requestId: number; resolve: (value: { bytes: ArrayBuffer; validated: ValidatedPack }) => void; reject: (error: Error & { cancelled?: boolean }) => void } | null = null;
+  /** Set synchronously when a job starts so concurrent `pump()` calls never start a second install. */
+  private active: ActiveInstall | null = null;
   private nextRequest = 1;
 
   readonly catalog = this.catalogState.asReadonly();
@@ -136,22 +160,32 @@ export class PackCatalogService {
     return added;
   }
 
-  cancel(packId: string): void {
+  /**
+   * Cancels a queued or running install. Returns false once activation has started: the commit is a
+   * single IndexedDB transaction and is reported as installed rather than falsely as cancelled.
+   */
+  cancel(packId: string): boolean {
     const index = this.queue.findIndex((pack) => pack.id === packId);
     if (index >= 0) {
       const [pack] = this.queue.splice(index, 1);
       this.setJob({ packId, name: pack.name, status: 'cancelled', phase: null, percent: null, error: 'Cancelled before starting' });
-      return;
+      return true;
     }
-    if (this.running?.pack.id === packId && this.worker) {
-      const request: InstallWorkerRequest = { type: 'cancel', requestId: this.running.requestId };
+    const active = this.active;
+    if (!active || active.pack.id !== packId || active.activating) return false;
+    active.cancelRequested = true;
+    if (active.requestId !== null && this.worker) {
+      const request: InstallWorkerRequest = { type: 'cancel', requestId: active.requestId };
       this.worker.postMessage(request);
     }
+    // Settle now; a late 'prepared' message for this request is ignored and never activated.
+    active.settle?.reject(cancelledError());
+    return true;
   }
 
   cancelAll(): void {
     for (const pack of [...this.queue]) this.cancel(pack.id);
-    if (this.running) this.cancel(this.running.pack.id);
+    if (this.active) this.cancel(this.active.pack.id);
   }
 
   dismissJob(packId: string): void {
@@ -174,11 +208,13 @@ export class PackCatalogService {
   }
 
   private async pump(): Promise<void> {
-    if (this.running) return;
+    if (this.active) return;
     const pack = this.queue.shift();
     if (!pack) return;
+    const active: ActiveInstall = { pack, requestId: null, cancelRequested: false, activating: false, settle: null };
+    this.active = active;
     try {
-      await this.install(pack);
+      await this.install(active);
       this.dismissJob(pack.id);
     } catch (error) {
       const cancelled = (error as { cancelled?: boolean }).cancelled === true;
@@ -191,7 +227,7 @@ export class PackCatalogService {
         error: cancelled ? 'Cancelled. Any previously installed version is unchanged.' : this.describe(error),
       });
     } finally {
-      this.running = null;
+      this.active = null;
       void this.pump();
     }
   }
@@ -215,10 +251,16 @@ export class PackCatalogService {
     }
   }
 
-  private async install(pack: RemotePack): Promise<void> {
+  private async install(active: ActiveInstall): Promise<void> {
+    const pack = active.pack;
+    this.setJob({ packId: pack.id, name: pack.name, status: 'running', phase: 'download', percent: 0, error: null });
     await this.ensureSpace(pack);
+    if (active.cancelRequested) throw cancelledError();
     const url = resolveDownloadUrl(pack.downloadUrl, this.config.downloadMirrors, document.baseURI);
-    const prepared = await this.prepareInWorker(pack, url);
+    const prepared = await this.prepareInWorker(active, url);
+    if (active.cancelRequested) throw cancelledError();
+    active.activating = true;
+    this.setJob({ packId: pack.id, name: pack.name, status: 'running', phase: 'activate', percent: null, error: null });
     const installedAt = Date.now();
     const record: InstalledPackRecord = {
       id: pack.id,
@@ -246,33 +288,33 @@ export class PackCatalogService {
     this.selection.refreshLocality();
   }
 
-  private prepareInWorker(pack: RemotePack, url: string): Promise<{ bytes: ArrayBuffer; validated: ValidatedPack }> {
+  private prepareInWorker(active: ActiveInstall, url: string): Promise<PreparedResult> {
     const worker = this.ensureWorker();
     const requestId = this.nextRequest++;
-    this.setJob({ packId: pack.id, name: pack.name, status: 'running', phase: 'download', percent: 0, error: null });
     return new Promise((resolve, reject) => {
-      this.running = { pack, requestId, resolve, reject };
-      const request: InstallWorkerRequest = { type: 'install', requestId, pack, url, wasmUrl: sqlWasmUrl() };
+      active.requestId = requestId;
+      active.settle = { resolve, reject };
+      const request: InstallWorkerRequest = { type: 'install', requestId, pack: active.pack, url, wasmUrl: sqlWasmUrl() };
       worker.postMessage(request);
     });
   }
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
-    const worker = new Worker(new URL('./pack-install.worker', import.meta.url), { type: 'module' });
+    const worker = this.createWorker();
     worker.onmessage = ({ data }: MessageEvent<InstallWorkerResponse>) => {
-      const running = this.running;
-      if (!running || running.requestId !== data.requestId) return;
+      const active = this.active;
+      if (!active || active.requestId !== data.requestId || active.cancelRequested || !active.settle) return;
       if (data.type === 'progress') {
-        this.setJob({ packId: running.pack.id, name: running.pack.name, status: 'running', phase: data.phase, percent: data.percent, error: null });
+        this.setJob({ packId: active.pack.id, name: active.pack.name, status: 'running', phase: data.phase, percent: data.percent, error: null });
       } else if (data.type === 'prepared') {
-        running.resolve({ bytes: data.bytes, validated: data.validated });
+        active.settle.resolve({ bytes: data.bytes, validated: data.validated });
       } else {
-        running.reject(Object.assign(new Error(data.message), { cancelled: data.cancelled }));
+        active.settle.reject(Object.assign(new Error(data.message), { cancelled: data.cancelled }));
       }
     };
     worker.onerror = () => {
-      this.running?.reject(new Error('The download worker stopped unexpectedly.'));
+      this.active?.settle?.reject(new Error('The download worker stopped unexpectedly.'));
       worker.terminate();
       this.worker = null;
     };

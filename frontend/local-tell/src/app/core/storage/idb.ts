@@ -28,7 +28,7 @@ export const STORE_NAMES: readonly StoreName[] = [
 ];
 
 export class StorageUnavailableError extends Error {
-  constructor(message: string, readonly cause?: unknown) {
+  constructor(message: string, override readonly cause?: unknown) {
     super(message);
     this.name = 'StorageUnavailableError';
   }

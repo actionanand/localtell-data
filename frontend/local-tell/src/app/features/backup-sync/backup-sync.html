@@ -67,6 +67,18 @@
       <section class="card" aria-labelledby="dbx-sync">
         <h2 id="dbx-sync"><app-icon name="refresh" /> Sync</h2>
         <p role="status">{{ statusText() }}</p>
+        @if (savedPlaces.excess() > 0) {
+          <div class="banner banner-warning" role="alert">
+            <p>
+              Saved Places has {{ savedPlaces.places().length }} entries but the limit is {{ savedPlaces.limit }}. Dropbox sync and new
+              saves are paused until it is within the limit. Nothing is removed automatically.
+            </p>
+            <div class="row">
+              <button type="button" class="btn" (click)="confirmOverflow.set(true)">Remove {{ savedPlaces.excess() }} oldest</button>
+              <a class="btn" routerLink="/saved">Delete places manually</a>
+            </div>
+          </div>
+        }
         <dl class="kv small">
           <dt>Last successful backup</dt>
           <dd>{{ meta().lastSuccessfulBackupAt ? (meta().lastSuccessfulBackupAt | date: 'medium') : '—' }}</dd>
@@ -219,5 +231,18 @@
   <p>
     This browser forgets its Dropbox sign-in and asks Dropbox to revoke it. Your Saved Places, downloaded packs and every backup in
     Dropbox are kept.
+  </p>
+</app-confirm-dialog>
+
+<app-confirm-dialog
+  [open]="confirmOverflow()"
+  heading="Remove the oldest extra saved places?"
+  [confirmLabel]="'Remove ' + savedPlaces.excess()"
+  [danger]="true"
+  (confirmed)="removeOverflow()"
+  (cancelled)="confirmOverflow.set(false)"
+>
+  <p>
+    Only the {{ savedPlaces.excess() }} oldest saved places in this browser are deleted. Backups in Dropbox are not changed.
   </p>
 </app-confirm-dialog>

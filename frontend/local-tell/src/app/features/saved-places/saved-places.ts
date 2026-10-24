@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { form, FormField } from '@angular/forms/signals';
+import { form, FormField, maxLength } from '@angular/forms/signals';
 import { SavedPlacesService } from '../../core/saved-places/saved-places.service';
 import type { SavedPlace } from '../../core/saved-places/saved-place';
 import { encode } from '../../core/location-code/local-tell-location-code';
@@ -61,7 +61,7 @@ export class SavedPlaces {
   protected readonly filterModel = signal({ query: '', sort: 'newest' as SortOrder });
   protected readonly filterForm = form(this.filterModel);
   protected readonly renameModel = signal({ name: '' });
-  protected readonly renameForm = form(this.renameModel);
+  protected readonly renameForm = form(this.renameModel, (path) => maxLength(path.name, 200));
   protected readonly renaming = signal<string | null>(null);
   protected readonly renameError = signal<string | null>(null);
   protected readonly expanded = signal<string | null>(null);

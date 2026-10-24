@@ -1,7 +1,7 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { APP_CONFIG } from '../config/app-config';
 import { getAll, requestToPromise, transaction } from '../storage/idb';
-import { classifySavedPlace, SavedPlaceIdentity, type SaveResult, type SavedPlace } from './saved-place';
+import { classifySavedPlace, SavedPlaceIdentity, SavedPlacesOverflow, type SaveResult, type SavedPlace } from './saved-place';
 import { kotlinIsBlank } from '../location-code/local-tell-location-code';
 
 /** Android ordering: `saved_at DESC, id DESC`. */
@@ -18,6 +18,7 @@ export class SavedPlacesService {
   readonly loaded = this.loadedState.asReadonly();
   readonly limit = this.config.limits.maxSavedPlaces;
   readonly overLimit = computed(() => this.items().length > this.limit);
+  readonly excess = computed(() => SavedPlacesOverflow.excess(this.items().length, this.limit));
   readonly full = computed(() => this.items().length >= this.limit);
 
   async load(): Promise<void> {
@@ -65,5 +66,22 @@ export class SavedPlacesService {
       for (const id of ids) await requestToPromise(store.delete(id));
     });
     await this.load();
+  }
+
+  /**
+   * Android `removeOldestOverflow`: replans inside the write transaction and never removes more than
+   * the count the user confirmed. Returns the number of places removed.
+   */
+  async removeOldestOverflow(confirmedMaximum: number): Promise<number> {
+    if (!Number.isInteger(confirmedMaximum) || confirmedMaximum < 0) throw new RangeError('Invalid confirmed maximum');
+    const removed = await transaction('savedPlaces', 'readwrite', async (tx) => {
+      const store = tx.objectStore('savedPlaces');
+      const current = (await requestToPromise(store.getAll())) as SavedPlace[];
+      const extra = SavedPlacesOverflow.oldestToRemove(current, this.limit).slice(0, confirmedMaximum);
+      for (const place of extra) await requestToPromise(store.delete(place.id));
+      return extra.length;
+    });
+    await this.load();
+    return removed;
   }
 }

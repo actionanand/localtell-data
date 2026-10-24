@@ -233,6 +233,7 @@ export interface PackTotals {
 const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 function normalizeSearch(value: string): string {
+  // eslint-disable-next-line no-control-regex -- Java `\s` includes VT (\u000B).
   return value.trim().toLowerCase().replace(/[ \t\n\u000B\f\r-]+/g, '');
 }
 

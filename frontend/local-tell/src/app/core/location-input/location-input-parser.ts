@@ -16,7 +16,9 @@ export type LocationInputResult =
 
 /** Java `\d`/`\s` are ASCII-only without UNICODE_CHARACTER_CLASS; the pattern keeps that meaning. */
 const COORDINATE_PATTERN =
+  // eslint-disable-next-line no-control-regex -- Java `\s` includes VT (\u000B).
   /^([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))[ \t\n\u000B\f\r]*(?:,|[ \t\n\u000B\f\r]+)[ \t\n\u000B\f\r]*([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))$/;
+// eslint-disable-next-line no-control-regex -- Java `\s` includes VT (\u000B).
 const SEPARATORS = /[ \t\n\u000B\f\r-]+/g;
 
 /** Port of Android `LocationInputParser.parse`. */

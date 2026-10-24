@@ -2,7 +2,35 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { DropboxAuthService } from '../../core/dropbox/dropbox-auth.service';
-import { DropboxBackupService, type RemoteOffer } from '../../core/dropbox/dropbox-backup.service';
+import { DropboxBackupService, type ApplyOfferResult, type RemoteOffer } from '../../core/dropbox/dropbox-backup.service';
+import type { NoticeTone } from '../../core/ui/notification.service';
+
+/** User-facing text for an apply result; a committed local merge is never reported as "nothing written". */
+export function describeApplyResult(result: ApplyOfferResult): { text: string; tone: NoticeTone } {
+  if (result.kind === 'not-applied') {
+    return {
+      text:
+        result.reason === 'remote-changed'
+          ? 'Dropbox changed before restoring. Nothing was written; run Sync Now again.'
+          : 'This browser gained data before the restore. Nothing was written; run Sync Now again.',
+      tone: 'warning',
+    };
+  }
+  switch (result.upload) {
+    case 'not-requested':
+      return { text: 'Backup restored into this browser.', tone: 'success' };
+    case 'uploaded':
+      return result.localPending
+        ? { text: 'Backup merged and uploaded. Changes made during the upload are not backed up yet.', tone: 'warning' }
+        : { text: 'Backup merged and uploaded.', tone: 'success' };
+    case 'remote-changed':
+      return { text: 'Backup merged into this browser, but Dropbox changed during the upload. Run Sync Now again to review.', tone: 'warning' };
+    case 'saved-limit-exceeded':
+      return { text: 'Backup merged into this browser. Upload is paused because Saved Places is over its limit.', tone: 'warning' };
+    case 'failed':
+      return { text: `Backup merged into this browser, but the upload failed: ${result.uploadError ?? 'unknown error'}`, tone: 'error' };
+  }
+}
 import type { DropboxRemoteFile } from '../../core/dropbox/dropbox-policy';
 import { MANAGED_DIRECTORY } from '../../core/dropbox/dropbox-policy';
 import { AppDataService, RestoreCapacityError } from '../../core/backup/app-data.service';
@@ -41,6 +69,7 @@ export class BackupSync {
 
   protected readonly rememberSignIn = signal(false);
   protected readonly confirmDisconnect = signal(false);
+  protected readonly confirmOverflow = signal(false);
   protected readonly offer = signal<RemoteOffer | null>(null);
   protected readonly fileImport = signal<FileImport | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -61,6 +90,8 @@ export class BackupSync {
         return 'Both this browser and Dropbox changed. Sync Now will ask you how to proceed.';
       case 'remote-empty':
         return 'Dropbox has no LocalTell backup with data yet.';
+      case 'saved-limit-exceeded':
+        return `Dropbox sync is paused: Saved Places has ${this.savedPlaces.excess()} more than the limit of ${this.savedPlaces.limit}.`;
       default:
         return 'Not checked yet.';
     }
@@ -103,7 +134,18 @@ export class BackupSync {
           this.notifications.show('Already up to date. Nothing was uploaded.', 'success');
           break;
         case 'uploaded':
-          this.notifications.show(`Backup ${outcome.file.name} uploaded and verified.`, 'success');
+          this.notifications.show(
+            outcome.localPending
+              ? `Backup ${outcome.file.name} uploaded and verified. Changes made during the upload are not backed up yet.`
+              : `Backup ${outcome.file.name} uploaded and verified.`,
+            outcome.localPending ? 'warning' : 'success',
+          );
+          break;
+        case 'saved-limit-exceeded':
+          this.notifications.show(
+            `Dropbox sync is paused: Saved Places has ${outcome.excess} more than the limit. Remove extra places to continue.`,
+            'warning',
+          );
           break;
         case 'nothing-to-back-up':
           this.notifications.show('There is nothing to back up yet.', 'info');
@@ -139,9 +181,22 @@ export class BackupSync {
     await this.run(async () => {
       const result = await this.backup.applyOffer(offer, upload);
       this.offer.set(null);
-      if (result === 'changed') this.notifications.show('Local or Dropbox data changed before restoring. Nothing was written; run Sync Now again.', 'warning');
-      else this.notifications.show(result === 'restored' ? 'Backup restored into this browser.' : 'Backup merged and uploaded.', 'success');
+      const message = describeApplyResult(result);
+      this.notifications.show(message.text, message.tone);
     });
+  }
+
+  /** Removes only the oldest extra places, after explicit confirmation (Android behaviour). */
+  protected async removeOverflow(): Promise<void> {
+    const confirmed = this.savedPlaces.excess();
+    this.confirmOverflow.set(false);
+    if (confirmed === 0) return;
+    try {
+      const removed = await this.savedPlaces.removeOldestOverflow(confirmed);
+      this.notifications.show(`Removed ${removed} oldest saved place${removed === 1 ? '' : 's'}. You can sync again.`, 'success');
+    } catch {
+      this.error.set('Saved places could not be removed. Nothing was changed.');
+    }
   }
 
   protected async keepLocal(): Promise<void> {
@@ -153,7 +208,9 @@ export class BackupSync {
       this.notifications.show(
         result === 'uploaded'
           ? 'This browser’s data was uploaded as a new backup. The other backup was left untouched.'
-          : 'Dropbox changed in the meantime. Nothing was uploaded; run Sync Now again.',
+          : result === 'saved-limit-exceeded'
+            ? 'Upload paused: Saved Places is over its limit. Remove extra places first.'
+            : 'Dropbox changed in the meantime. Nothing was uploaded; run Sync Now again.',
         result === 'uploaded' ? 'success' : 'warning',
       );
     });

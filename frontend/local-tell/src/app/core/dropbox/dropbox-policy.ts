@@ -139,8 +139,8 @@ export class DropboxValidationError extends Error {
 
 /** The listed file no longer matches what Dropbox returned; abort instead of accepting other content. */
 export class DropboxDownloadMismatchError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = 'DropboxDownloadMismatchError';
   }
 }

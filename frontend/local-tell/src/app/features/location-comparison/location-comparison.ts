@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { form, FormField } from '@angular/forms/signals';
+import { form, FormField, maxLength } from '@angular/forms/signals';
 import { BrowserGeolocationService } from '../../core/geolocation/browser-geolocation.service';
 import { IpGeolocationService } from '../../core/ip-geolocation/ip-geolocation.service';
 import { ObservationsService, type ObservationPoint } from '../../core/observations/observations.service';
@@ -38,7 +38,7 @@ export class LocationComparison {
   protected readonly fixed = formatFixed;
   protected readonly showDisclosure = signal(false);
   protected readonly labelModel = signal({ label: '' });
-  protected readonly labelForm = form(this.labelModel);
+  protected readonly labelForm = form(this.labelModel, (path) => maxLength(path.label, 120));
   protected readonly pendingClear = signal(false);
 
   protected readonly deviceFix = computed(() => {

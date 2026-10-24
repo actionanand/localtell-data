@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { PackCatalogService } from '../../core/geographic-packs/pack-catalog.service';
 import { formatPackBytes, type RemotePack } from '../../core/geographic-packs/pack-manifest';
 
-const PHASE_LABELS = { download: 'Downloading', verify: 'Verifying SHA-256', decompress: 'Decompressing', validate: 'Validating database' } as const;
+const PHASE_LABELS = { download: 'Downloading', verify: 'Verifying SHA-256', decompress: 'Decompressing', validate: 'Validating database', activate: 'Activating (can no longer be cancelled)' } as const;
 
 @Component({
   selector: 'app-pack-list',
@@ -56,7 +56,7 @@ const PHASE_LABELS = { download: 'Downloading', verify: 'Verifying SHA-256', dec
             }
           </div>
           <div class="row">
-            @if (job && (job.status === 'running' || job.status === 'queued')) {
+            @if (job && (job.status === 'running' || job.status === 'queued') && job.phase !== 'activate') {
               <button type="button" class="btn btn-small" (click)="catalog.cancel(pack.id)" [attr.aria-label]="'Cancel ' + pack.name">Cancel</button>
             } @else if (job && (job.status === 'failed' || job.status === 'cancelled')) {
               <button type="button" class="btn btn-small" (click)="catalog.enqueue([pack])" [attr.aria-label]="'Retry ' + pack.name">Retry</button>

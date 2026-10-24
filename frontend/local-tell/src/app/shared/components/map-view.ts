@@ -39,6 +39,16 @@ const DEFAULT_CENTER: Leaflet.LatLngTuple = [20, 78];
 const DEFAULT_ZOOM = 4;
 
 /**
+ * Leaflet is UMD/CommonJS. The production esbuild bundle exposes it only as the dynamic import's
+ * `default` export, while the dev server and type definitions expose named exports.
+ */
+export function leafletNamespace(module: typeof Leaflet & { default?: typeof Leaflet }): typeof Leaflet {
+  const namespace = typeof module.map === 'function' ? module : module.default;
+  if (!namespace || typeof namespace.map !== 'function') throw new Error('Leaflet failed to load');
+  return namespace;
+}
+
+/**
  * Reusable Leaflet map. Codes and offline lookups never depend on it: if Leaflet or tiles fail the
  * component reports the problem while the rest of the page keeps working.
  */
@@ -151,7 +161,7 @@ export class MapView {
 
   private async initialise(): Promise<void> {
     try {
-      const L = await import('leaflet');
+      const L = leafletNamespace(await import('leaflet'));
       this.L = L;
       const element = this.container().nativeElement;
       const map = L.map(element, { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, worldCopyJump: true, keyboard: true });

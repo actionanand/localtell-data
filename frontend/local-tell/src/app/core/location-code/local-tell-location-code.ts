@@ -41,8 +41,10 @@ const ALPHABET_SIZE = BigInt(SAFE_ALPHABET.length);
 const LONG_MAX = 0x7fff_ffff_ffff_ffffn;
 
 /** Kotlin `Char.isWhitespace()`: Java whitespace plus every Unicode space separator. */
+// eslint-disable-next-line no-control-regex -- Kotlin whitespace includes VT and \u001C-\u001F.
 const KOTLIN_WHITESPACE = /[\t\n\u000B\f\r\u001C-\u001F\p{Zs}\u2028\u2029]/u;
 /** Java regex `\s` without UNICODE_CHARACTER_CLASS is ASCII-only. */
+// eslint-disable-next-line no-control-regex -- Java `\s` includes VT (\u000B).
 const SEPARATORS = /[ \t\n\u000B\f\r-]+/g;
 const UNICODE_DECIMAL_DIGIT = /^\p{Nd}$/u;
 
@@ -92,6 +94,7 @@ export function encode(latitude: number, longitude: number): EncodedLocation {
 export function decodeNumeric(value: string): LocationCodeDecodeResult {
   const normalized = normalize(value);
   if (normalized.length !== NUMERIC_CODE_LENGTH) return { kind: 'InvalidLength' };
+  // eslint-disable-next-line @typescript-eslint/prefer-for-of -- Kotlin checks UTF-16 units; for-of would yield code points.
   for (let index = 0; index < normalized.length; index++) {
     if (!isUnicodeDigit(normalized[index])) return { kind: 'MalformedNumericCode' };
   }
@@ -103,6 +106,7 @@ export function decodeNumeric(value: string): LocationCodeDecodeResult {
 export function decodeShort(value: string): LocationCodeDecodeResult {
   const normalized = normalize(value);
   if (normalized.length !== SHORT_CODE_LENGTH) return { kind: 'InvalidLength' };
+  // eslint-disable-next-line @typescript-eslint/prefer-for-of -- Kotlin checks UTF-16 units; for-of would yield code points.
   for (let index = 0; index < normalized.length; index++) {
     if (!SAFE_ALPHABET.includes(normalized[index])) return { kind: 'InvalidCharacter' };
   }

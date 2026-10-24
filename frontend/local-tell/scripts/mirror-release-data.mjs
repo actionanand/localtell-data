@@ -11,8 +11,12 @@ const SAFE_PATH = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 const MAX_PACK_BYTES = 256 * 1024 * 1024;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = resolve(root, process.argv[2] ?? 'dist/local-tell/browser/data-mirror');
-const sources = JSON.parse(await readFile(join(root, 'src/config/manifest-sources.json'), 'utf8'));
+const positional = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+const countryFilter = process.argv.slice(2).find((arg) => arg.startsWith('--countries='))?.slice('--countries='.length).split(',');
+const outDir = resolve(root, positional[0] ?? 'dist/local-tell/browser/data-mirror');
+const sources = JSON.parse(await readFile(join(root, 'src/config/manifest-sources.json'), 'utf8')).filter(
+  (source) => !countryFilter || countryFilter.includes(source.countryCode),
+);
 
 function relativePath(url) {
   if (!url.startsWith(RELEASE_PREFIX)) throw new Error(`Not a mirrored release URL: ${url}`);

@@ -21,6 +21,8 @@ import { isBackupEmpty, type AppBackupData, type AppRestorePlan } from '../backu
 import { AppDataService, RestoreCapacityError } from '../backup/app-data.service';
 import { getSetting, putSetting } from '../storage/idb';
 import { StrictJsonError } from '../backup/strict-json';
+import { APP_CONFIG } from '../config/app-config';
+import { SavedPlacesOverflow } from '../saved-places/saved-place';
 
 export interface DropboxSyncMeta {
   readonly baseline: string | null;
@@ -55,12 +57,34 @@ export interface RemoteOffer {
 
 export type SyncOutcome =
   | { readonly kind: 'up-to-date' }
-  | { readonly kind: 'uploaded'; readonly file: DropboxRemoteFile }
+  | { readonly kind: 'uploaded'; readonly file: DropboxRemoteFile; readonly localPending: boolean }
   | { readonly kind: 'nothing-to-back-up' }
   | { readonly kind: 'offer'; readonly offer: RemoteOffer }
-  | { readonly kind: 'remote-changed' };
+  | { readonly kind: 'remote-changed' }
+  | { readonly kind: 'saved-limit-exceeded'; readonly excess: number };
 
-export type SyncStatusSummary = 'in-sync' | 'local-changes' | 'remote-changes' | 'both-changed' | 'remote-empty' | 'unknown';
+/**
+ * Result of applying a previewed backup. `applied` means the local IndexedDB transaction committed;
+ * anything that happens afterwards (upload, conflicts, a changed session) is reported in `upload`
+ * and never presented as "nothing was written".
+ */
+export type ApplyOfferResult =
+  | { readonly kind: 'not-applied'; readonly reason: 'remote-changed' | 'local-changed' }
+  | {
+      readonly kind: 'applied';
+      readonly upload: 'not-requested' | 'uploaded' | 'remote-changed' | 'saved-limit-exceeded' | 'failed';
+      readonly uploadError: string | null;
+      readonly localPending: boolean;
+    };
+
+export type SyncStatusSummary =
+  | 'in-sync'
+  | 'local-changes'
+  | 'remote-changes'
+  | 'both-changed'
+  | 'remote-empty'
+  | 'saved-limit-exceeded'
+  | 'unknown';
 
 export interface DiagnosticEntry {
   readonly at: number;
@@ -112,6 +136,7 @@ function errorSummary(error: unknown): string {
 export class DropboxBackupService {
   private readonly auth = inject(DropboxAuthService);
   private readonly appData = inject(AppDataService);
+  private readonly savedLimit = inject(APP_CONFIG).limits.maxSavedPlaces;
   private readonly ledger = new DropboxOwnershipLedger();
   private readonly filesState = signal<readonly RemoteBackupView[]>([]);
   private readonly metaState = signal<DropboxSyncMeta>(EMPTY_META);
@@ -150,6 +175,10 @@ export class DropboxBackupService {
       const files = await this.listViews(session);
       const ownership = await this.requireLedger(session.account);
       const local = await this.appData.snapshot();
+      if (SavedPlacesOverflow.excess(local.savedPlaces.length, this.savedLimit) > 0) {
+        this.statusState.set('saved-limit-exceeded');
+        return 'saved-limit-exceeded';
+      }
       const localFingerprint = await backupFingerprint(local);
       const remote = await selectRemoteBaseline(files, null, ownership, (file) => this.download(session, file), isInvalidRemoteBackup);
       const remoteFingerprint = remote.data ? await backupFingerprint(remote.data) : null;
@@ -200,39 +229,49 @@ export class DropboxBackupService {
    * Applies a previewed remote backup locally after confirming the file set and revision are
    * unchanged. Read-only toward Dropbox. Restore offers write only into a still-empty browser.
    */
-  async applyOffer(offer: RemoteOffer, uploadMergedResult: boolean): Promise<'restored' | 'merged-and-uploaded' | 'changed'> {
+  async applyOffer(offer: RemoteOffer, uploadMergedResult: boolean): Promise<ApplyOfferResult> {
     return this.exclusive('Restoring backup', async (session) => {
       const files = await this.listFiles(session);
       const current = files.find((file) => file.id === offer.file.id);
       if (!current || current.revision !== offer.file.revision || (await DropboxRemoteState.token(files)) !== offer.remoteStateToken) {
-        return 'changed';
+        return { kind: 'not-applied', reason: 'remote-changed' };
       }
       const restored = await this.appData.applyRestore(offer.data, 'dropbox', { requireEmpty: offer.kind === 'restore-offer' });
-      if (restored === null) return 'changed';
-      const remoteFingerprint = await backupFingerprint(offer.data);
-      this.auth.requireSession(session.generation);
-      if (!uploadMergedResult) {
-        const local = await backupFingerprint(await this.appData.snapshot());
-        await this.updateMeta(session.account, {
-          lastRestoreAt: Date.now(),
-          baseline: local === remoteFingerprint ? remoteFingerprint : this.metaState().baseline,
-        });
-        this.statusState.set(local === remoteFingerprint ? 'in-sync' : 'local-changes');
-        return 'restored';
+      if (restored === null) return { kind: 'not-applied', reason: 'local-changed' };
+      // The local merge is committed from here on: report later problems without claiming nothing changed.
+      try {
+        const remoteFingerprint = await backupFingerprint(offer.data);
+        await this.updateMeta(session.account, { lastRestoreAt: Date.now(), baseline: remoteFingerprint });
+        const afterRestore = await this.appData.snapshot();
+        const excess = SavedPlacesOverflow.excess(afterRestore.savedPlaces.length, this.savedLimit);
+        if (!uploadMergedResult || excess > 0) {
+          const localPending = (await backupFingerprint(afterRestore)) !== remoteFingerprint;
+          this.statusState.set(excess > 0 ? 'saved-limit-exceeded' : localPending ? 'local-changes' : 'in-sync');
+          return { kind: 'applied', upload: uploadMergedResult ? 'saved-limit-exceeded' : 'not-requested', uploadError: null, localPending };
+        }
+        this.auth.requireSession(session.generation);
+        const uploaded = await this.uploadVerified(session, afterRestore, files);
+        if (uploaded === 'conflict') return { kind: 'applied', upload: 'remote-changed', uploadError: null, localPending: true };
+        return { kind: 'applied', upload: 'uploaded', uploadError: null, localPending: this.statusState() === 'local-changes' };
+      } catch (error) {
+        this.log('FAILED', errorSummary(error));
+        this.statusState.set('local-changes');
+        return { kind: 'applied', upload: uploadMergedResult ? 'failed' : 'not-requested', uploadError: errorSummary(error), localPending: true };
       }
-      await this.updateMeta(session.account, { lastRestoreAt: Date.now() });
-      const uploaded = await this.uploadVerified(session, await this.appData.snapshot(), files);
-      if (uploaded === 'conflict') return 'changed';
-      return 'merged-and-uploaded';
     });
   }
 
   /** "Use this browser's data": append-only upload; nothing in Dropbox is replaced. */
-  async uploadLocal(expectedToken: string): Promise<'uploaded' | 'changed'> {
+  async uploadLocal(expectedToken: string): Promise<'uploaded' | 'changed' | 'saved-limit-exceeded'> {
     return this.exclusive('Uploading backup', async (session) => {
+      const local = await this.appData.snapshot();
+      if (SavedPlacesOverflow.excess(local.savedPlaces.length, this.savedLimit) > 0) {
+        this.statusState.set('saved-limit-exceeded');
+        return 'saved-limit-exceeded';
+      }
       const files = await this.listFiles(session);
       if ((await DropboxRemoteState.token(files)) !== expectedToken) return 'changed';
-      const result = await this.uploadVerified(session, await this.appData.snapshot(), files);
+      const result = await this.uploadVerified(session, local, files);
       return result === 'conflict' ? 'changed' : 'uploaded';
     });
   }
@@ -241,12 +280,18 @@ export class DropboxBackupService {
     const files = await this.listViews(session);
     const ownership = await this.requireLedger(session.account);
     const local = await this.appData.snapshot();
+    // Android pauses Dropbox sync (including pending-upload resumption) while Saved Places is over its limit.
+    const excess = SavedPlacesOverflow.excess(local.savedPlaces.length, this.savedLimit);
+    if (excess > 0) {
+      this.statusState.set('saved-limit-exceeded');
+      return { kind: 'saved-limit-exceeded', excess };
+    }
     const localFingerprint = await backupFingerprint(local);
     const pending = await this.ledger.pending(session.account);
     if (pending && files.some((file) => file.id === pending.file.id)) {
       // Resume verification of an upload that Dropbox already accepted instead of uploading again.
       const result = await this.uploadVerified(session, local, files);
-      return result === 'conflict' ? { kind: 'remote-changed' } : { kind: 'uploaded', file: result };
+      return result === 'conflict' ? { kind: 'remote-changed' } : { kind: 'uploaded', file: result, localPending: this.statusState() === 'local-changes' };
     }
     if (pending) await this.ledger.clearPending(session.account);
     const remote = await selectRemoteBaseline(files, null, ownership, (file) => this.download(session, file), isInvalidRemoteBackup);
@@ -260,12 +305,12 @@ export class DropboxBackupService {
     switch (decision) {
       case 'UP_TO_DATE':
         await this.updateMeta(session.account, { baseline: localFingerprint, lastCheckAt: Date.now() });
-        this.statusState.set('in-sync');
+        await this.publishLocalState(localFingerprint);
         return { kind: 'up-to-date' };
       case 'UPLOAD_LOCAL': {
         if (isBackupEmpty(local) && remote.file === null) return { kind: 'nothing-to-back-up' };
         const result = await this.uploadVerified(session, local, files);
-        return result === 'conflict' ? { kind: 'remote-changed' } : { kind: 'uploaded', file: result };
+        return result === 'conflict' ? { kind: 'remote-changed' } : { kind: 'uploaded', file: result, localPending: this.statusState() === 'local-changes' };
       }
       case 'RESTORE_REMOTE':
       case 'CONFLICT': {
@@ -322,8 +367,21 @@ export class DropboxBackupService {
       this.statusState.set('both-changed');
       return 'conflict';
     }
-    this.statusState.set('in-sync');
+    await this.publishLocalState(fingerprint);
     return uploaded;
+  }
+
+  /**
+   * Publishes status from a fresh local snapshot, as Android does after `markSuccess`: an edit made
+   * while the upload ran stays pending instead of being reported as in sync.
+   */
+  private async publishLocalState(syncedFingerprint: string): Promise<void> {
+    const current = await this.appData.snapshot();
+    if (SavedPlacesOverflow.excess(current.savedPlaces.length, this.savedLimit) > 0) {
+      this.statusState.set('saved-limit-exceeded');
+      return;
+    }
+    this.statusState.set((await backupFingerprint(current)) === syncedFingerprint ? 'in-sync' : 'local-changes');
   }
 
   private async upload(session: DropboxSession, data: AppBackupData): Promise<DropboxRemoteFile> {
@@ -418,11 +476,11 @@ export class DropboxBackupService {
       throw Object.assign(new Error(`Dropbox download failed (HTTP ${response.status})`), { status: response.status });
     }
     const resultHeader = response.headers.get('Dropbox-API-Result');
-    let actual: { id?: string; rev?: string; size?: number; content_hash?: string } = {};
+    let actual: { id?: string; rev?: string; size?: number; content_hash?: string };
     try {
       actual = resultHeader ? JSON.parse(resultHeader) : {};
-    } catch {
-      throw new DropboxDownloadMismatchError('Dropbox download metadata is unreadable');
+    } catch (error) {
+      throw new DropboxDownloadMismatchError('Dropbox download metadata is unreadable', { cause: error });
     }
     if (
       actual.id !== file.id ||
@@ -474,7 +532,7 @@ export class DropboxBackupService {
     } catch (error) {
       this.log('FAILED', errorSummary(error));
       if (error instanceof RestoreCapacityError) throw error;
-      throw new Error(errorSummary(error));
+      throw new Error(errorSummary(error), { cause: error });
     } finally {
       this.busyState.set(null);
     }
@@ -532,5 +590,7 @@ function describeOutcome(outcome: SyncOutcome): string {
       return outcome.offer.kind === 'conflict' ? 'Waiting for your choice (different data on both sides)' : 'Dropbox backup available to restore';
     case 'remote-changed':
       return 'Dropbox changed during the sync; check again';
+    case 'saved-limit-exceeded':
+      return `Paused: Saved Places is ${outcome.excess} over the limit`;
   }
 }

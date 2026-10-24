@@ -26,8 +26,8 @@
             "tsConfig": "tsconfig.app.json",
             "webWorkerTsConfig": "tsconfig.worker.json",
             "inlineStyleLanguage": "scss",
-            "allowedCommonJsDependencies": ["dropbox", "sql.js"],
-            "loader": { ".wasm": "binary" },
+            "allowedCommonJsDependencies": ["dropbox", "leaflet", "sql.js"],
+            "loader": { ".wasm": "binary", ".bklt": "binary" },
             "assets": [
               {
                 "glob": "**/*",
@@ -75,7 +75,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "proxyConfig": "proxy.conf.json"
+            "proxyConfig": "proxy.conf.mjs"
           },
           "configurations": {
             "production": {
@@ -90,7 +90,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "setupFiles": ["src/test-setup.ts"]
+            "setupFiles": ["src/test-setup.ts"],
+            "runnerConfig": "vitest-base.config.ts"
           }
         },
         "lint": {

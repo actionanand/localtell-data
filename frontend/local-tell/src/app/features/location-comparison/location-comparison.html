@@ -1,0 +1,164 @@
+<header class="page-header">
+  <h1>Location Comparison</h1>
+  <p>
+    Compare where your browser places you with where your public IP address appears to be — for example to see whether a VPN
+    changes your apparent country. This is a comparison of two independent estimates, not VPN detection.
+  </p>
+</header>
+
+<div class="split">
+  <div class="stack">
+    <section class="card" aria-labelledby="cmp-device">
+      <h2 id="cmp-device"><app-icon name="locate" /> Device location</h2>
+      <p class="small muted">From the browser Geolocation API (may use GPS, Wi-Fi, cellular or network data). Requested only when you press the button.</p>
+      @if (deviceFix(); as fix) {
+        <p class="code-value">{{ fixed(fix.latitude, 6) }}, {{ fixed(fix.longitude, 6) }}</p>
+        <p class="small muted">
+          @if (fix.accuracyMetres !== null) {
+            Accuracy about {{ fix.accuracyMetres | number: '1.0-0' }} m ·
+          }
+          {{ fix.timestamp | date: 'medium' }}
+        </p>
+      } @else if (device(); as state) {
+        @if (state.status === 'error') {
+          <p class="banner banner-warning small" role="alert">{{ state.message }}</p>
+        } @else if (state.status === 'locating') {
+          <p role="status">Waiting for the browser…</p>
+        }
+      }
+      <div class="row">
+        <button type="button" class="btn btn-primary" (click)="detectDevice()" [disabled]="device().status === 'locating'">
+          <app-icon name="locate" /> {{ deviceFix() ? 'Refresh device location' : 'Detect my location' }}
+        </button>
+        @if (deviceFix()) {
+          <button type="button" class="btn" (click)="useLocation('device')">Use for codes</button>
+        }
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="cmp-ip">
+      <h2 id="cmp-ip"><app-icon name="globe" /> Public IP location <span class="badge badge-warning">Approximate</span></h2>
+      @if (!ip.configured()) {
+        <p class="muted">No IP geolocation provider is configured for this deployment.</p>
+      } @else {
+        <p class="small muted">
+          Looked up from {{ ip.providerName }}, which receives your public IP address. City-level at best and often only
+          region- or country-level.
+        </p>
+        @if (ipLocation(); as location) {
+          <dl class="kv">
+            <dt>Place</dt>
+            <dd>{{ ipPlace() }}</dd>
+            <dt>Coordinates</dt>
+            <dd>{{ fixed(location.latitude, 4) }}, {{ fixed(location.longitude, 4) }}</dd>
+            @if (location.ip) {
+              <dt>Public IP</dt>
+              <dd>{{ location.ip }}</dd>
+            }
+            <dt>Provider</dt>
+            <dd>{{ location.provider }} · {{ location.timestamp | date: 'medium' }}</dd>
+          </dl>
+        } @else if (ipState(); as state) {
+          @if (state.status === 'error') {
+            <p class="banner banner-warning small" role="alert">{{ state.message }}</p>
+          } @else if (state.status === 'loading') {
+            <p role="status">Contacting {{ ip.providerName }}…</p>
+          }
+        }
+        <div class="row">
+          <button type="button" class="btn btn-primary" (click)="requestIp()" [disabled]="ipState().status === 'loading'">
+            <app-icon name="refresh" /> {{ ipLocation() ? 'Refresh IP location' : 'Look up IP location' }}
+          </button>
+          @if (ipLocation()) {
+            <button type="button" class="btn" (click)="useLocation('ip')">Use for codes</button>
+          }
+        </div>
+        <p class="small muted">After switching VPN servers, press refresh to compare again.</p>
+      }
+    </section>
+
+    <section class="card" aria-labelledby="cmp-result">
+      <h2 id="cmp-result"><app-icon name="compare" /> Comparison</h2>
+      @if (distanceKm() !== null) {
+        <p>
+          The two estimates are about <strong>{{ distanceKm() | number: '1.0-0' }} km</strong> apart
+          @if (deviceFix() && ipLocation()) {
+            (device vs. {{ ipLocation()?.country ?? 'IP location' }}).
+          }
+        </p>
+        <p class="small muted">
+          A large difference often means traffic exits elsewhere (VPN, proxy, mobile carrier gateway) or that the IP database is
+          imprecise. It does not prove a VPN is in use.
+        </p>
+      } @else {
+        <p class="muted">Get both locations to compare them.</p>
+      }
+      @if (deviceFix() || ipLocation()) {
+        <form class="row" (submit)="$event.preventDefault(); saveComparison()">
+          <div class="field">
+            <label for="cmp-label">Optional label</label>
+            <input id="cmp-label" type="text" maxlength="120" [formField]="labelForm.label" placeholder="e.g. VPN Singapore" />
+          </div>
+          <button type="submit" class="btn">Save comparison</button>
+        </form>
+      }
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="cmp-map">
+    <h2 id="cmp-map"><app-icon name="map" /> Map</h2>
+    <app-map-view [markers]="markers()" ariaLabel="Device and IP location map" />
+  </section>
+</div>
+
+<section class="card history" aria-labelledby="cmp-history">
+  <div class="row">
+    <h2 id="cmp-history">Saved comparisons</h2>
+    @if (observations.observations().length > 0) {
+      <button type="button" class="btn btn-small btn-danger" (click)="pendingClear.set(true)">Clear history</button>
+    }
+  </div>
+  <p class="small muted">Stored only in this browser; never included in Dropbox or .bklt backups. <a routerLink="/settings">Manage data</a></p>
+  <ul class="list">
+    @for (entry of observations.observations(); track entry.id) {
+      <li>
+        <strong>{{ entry.label ?? 'Comparison' }}</strong>
+        <span class="small muted"> · {{ entry.createdAt | date: 'medium' }}</span>
+        @if (entry.distanceMetres !== null) {
+          <span class="small"> · {{ entry.distanceMetres / 1000 | number: '1.0-0' }} km apart</span>
+        }
+        <ul class="small">
+          @for (point of entry.points; track point.source) {
+            <li>
+              {{ point.source === 'device' ? 'Device' : 'IP' }}: {{ fixed(point.latitude, 5) }}, {{ fixed(point.longitude, 5) }}
+              @if (point.accuracyMetres !== null) {
+                (±{{ point.accuracyMetres | number: '1.0-0' }} m)
+              }
+              · {{ point.provider }}
+              @if (point.country) {
+                · {{ point.country }}
+              }
+            </li>
+          }
+        </ul>
+        <button type="button" class="btn btn-small" (click)="observations.delete(entry.id)" [attr.aria-label]="'Delete comparison ' + (entry.label ?? '')">
+          <app-icon name="trash" /> Delete
+        </button>
+      </li>
+    } @empty {
+      <li class="muted">No saved comparisons.</li>
+    }
+  </ul>
+</section>
+
+<app-confirm-dialog [open]="showDisclosure()" heading="Look up your IP location?" confirmLabel="Continue" (confirmed)="acceptDisclosure()" (cancelled)="showDisclosure.set(false)">
+  <p>
+    LocalTell will send a request to <strong>{{ ip.providerName }}</strong>. The provider sees your public IP address and returns an
+    approximate location. LocalTell does not send your device location or codes. See the provider's
+    <a [href]="ip.privacyUrl" target="_blank" rel="noopener noreferrer">privacy policy</a>.
+  </p>
+</app-confirm-dialog>
+
+<app-confirm-dialog [open]="pendingClear()" heading="Clear comparison history?" confirmLabel="Clear" [danger]="true" (confirmed)="clearHistory()" (cancelled)="pendingClear.set(false)">
+  <p>All saved comparisons in this browser will be deleted. Saved Places are not affected.</p>
+</app-confirm-dialog>

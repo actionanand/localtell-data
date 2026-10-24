@@ -1,0 +1,140 @@
+<header class="page-header">
+  <h1>LocalTell Web</h1>
+  <p>
+    Help someone find a place by phone: decode the LocalTell code they read out, see it on a map and open Google Maps. Codes are
+    generated and decoded entirely in your browser.
+  </p>
+</header>
+
+<section aria-labelledby="quick-actions" class="card mb">
+  <h2 id="quick-actions">Quick actions</h2>
+  <div class="row">
+    <a routerLink="/easy" class="btn btn-primary"><app-icon name="search" /> Decode a code</a>
+    <button type="button" class="btn" (click)="detect()" [disabled]="device().status === 'locating'">
+      <app-icon name="locate" /> Detect my location
+    </button>
+    <a routerLink="/map" class="btn"><app-icon name="map" /> Open map</a>
+    <a routerLink="/offline-data" class="btn"><app-icon name="download" /> Download offline data</a>
+    <button type="button" class="btn" (click)="syncNow()"><app-icon name="cloud" /> Sync now</button>
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card" aria-labelledby="card-device">
+    <h2 id="card-device"><app-icon name="locate" /> Device location</h2>
+    @switch (device().status) {
+      @case ('located') {
+        @if (device(); as state) {
+          @if (state.status === 'located') {
+            <p class="code-value">{{ fixed(state.fix.latitude, 6) }}, {{ fixed(state.fix.longitude, 6) }}</p>
+            <p class="small muted">
+              @if (state.fix.accuracyMetres !== null) {
+                About {{ state.fix.accuracyMetres | number: '1.0-0' }} m ·
+              }
+              {{ state.fix.timestamp | date: 'medium' }} · browser-provided (GPS, Wi-Fi or network)
+            </p>
+          }
+        }
+      }
+      @case ('locating') {
+        <p class="muted">Waiting for the browser…</p>
+      }
+      @case ('error') {
+        @if (device(); as state) {
+          @if (state.status === 'error') {
+            <p class="banner banner-warning small">{{ state.message }}</p>
+          }
+        }
+      }
+      @default {
+        <p class="muted">Not requested. Your location is only read when you press “Detect my location”.</p>
+      }
+    }
+  </section>
+
+  <section class="card" aria-labelledby="card-ip">
+    <h2 id="card-ip"><app-icon name="globe" /> Approximate IP location</h2>
+    @if (ip.current(); as state) {
+      @if (state.status === 'located') {
+        <p>
+          <strong>{{ state.location.city ?? 'Unknown city' }}</strong>, {{ state.location.region ?? '' }}
+          {{ state.location.country ?? '' }}
+        </p>
+        <p class="small muted">Approximate · {{ state.location.provider }} · {{ state.location.timestamp | date: 'shortTime' }}</p>
+      } @else if (state.status === 'error') {
+        <p class="banner banner-warning small">{{ state.message }}</p>
+      } @else {
+        <p class="muted">Not requested. Compare it with your device location on the Location Comparison page.</p>
+      }
+    }
+    <a routerLink="/compare" class="btn btn-small"><app-icon name="compare" /> Compare locations</a>
+  </section>
+
+  <section class="card" aria-labelledby="card-selected">
+    <h2 id="card-selected"><app-icon name="target" /> Last selected location</h2>
+    @if (selected(); as location) {
+      <p class="code-value">{{ location.encoded.shortCode }}</p>
+      <p class="small">{{ location.encoded.numericCode }}</p>
+      @if (locality(); as state) {
+        @if (state.status === 'resolved') {
+          <p class="small">{{ state.match.localityName }}, {{ state.match.district ?? state.match.state ?? '' }}</p>
+        }
+      }
+      <button type="button" class="btn btn-small" (click)="openSelected()">Open details</button>
+    } @else {
+      <p class="muted">Nothing selected yet.</p>
+    }
+  </section>
+
+  <section class="card" aria-labelledby="card-packs">
+    <h2 id="card-packs"><app-icon name="download" /> Offline geographic packs</h2>
+    <p>
+      <strong>{{ installedCount() }}</strong> installed
+      @if (packs.busy()) {
+        <span class="badge badge-info">Downloading</span>
+      }
+    </p>
+    @if (installedCount() > 0) {
+      <p class="small muted">{{ installedNames() }}@if (installedCount() > 6) { … }</p>
+    } @else {
+      <p class="small muted">Install packs to see locality names offline.</p>
+    }
+    <a routerLink="/offline-data" class="btn btn-small">Manage offline data</a>
+  </section>
+
+  <section class="card" aria-labelledby="card-saved">
+    <h2 id="card-saved"><app-icon name="bookmark" /> Saved Places</h2>
+    <p>
+      <strong>{{ savedPlaces.places().length }}</strong> of {{ savedPlaces.limit }} saved
+      @if (savedPlaces.overLimit()) {
+        <span class="badge badge-warning">Over limit</span>
+      }
+    </p>
+    <a routerLink="/saved" class="btn btn-small">Open Saved Places</a>
+  </section>
+
+  <section class="card" aria-labelledby="card-dropbox">
+    <h2 id="card-dropbox"><app-icon name="cloud" /> Dropbox</h2>
+    @switch (dropbox.connection().status) {
+      @case ('connected') {
+        <p><span class="badge badge-success">Connected</span> {{ dropbox.connection().accountName }}</p>
+      }
+      @case ('unconfigured') {
+        <p class="muted">Not configured for this deployment.</p>
+      }
+      @case ('connecting') {
+        <p class="muted">Connecting…</p>
+      }
+      @default {
+        <p class="muted">Not connected.</p>
+      }
+    }
+    <dl class="kv small">
+      <dt>Last backup</dt>
+      <dd>{{ backup.meta().lastSuccessfulBackupAt ? (backup.meta().lastSuccessfulBackupAt | date: 'medium') : '—' }}</dd>
+      <dt>Last restore</dt>
+      <dd>{{ backup.meta().lastRestoreAt ? (backup.meta().lastRestoreAt | date: 'medium') : '—' }}</dd>
+    </dl>
+    <a routerLink="/backup" class="btn btn-small">Dropbox Backup</a>
+  </section>
+</div>

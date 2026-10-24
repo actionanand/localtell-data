@@ -1,0 +1,139 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--lt-surface);
+  border-bottom: 1px solid var(--lt-border);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--lt-text);
+  font-weight: 700;
+  font-size: 1.15rem;
+  text-decoration: none;
+}
+
+.brand-mark {
+  border-radius: 0.5rem;
+}
+
+.brand-sub {
+  color: var(--lt-primary);
+}
+
+.connection {
+  margin: 0 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--lt-muted);
+
+  .dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--lt-success);
+  }
+
+  &.offline .dot {
+    background: var(--lt-warning);
+  }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: calc(100dvh - 3.5rem);
+}
+
+.sidebar {
+  border-right: 1px solid var(--lt-border);
+  background: var(--lt-surface);
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 0.5rem;
+    position: sticky;
+    top: 3.5rem;
+  }
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--lt-text);
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      background: var(--lt-hover);
+    }
+
+    &.active {
+      background: var(--lt-primary-soft);
+      color: var(--lt-primary-strong);
+    }
+  }
+}
+
+main {
+  padding: 1.25rem clamp(0.75rem, 3vw, 2rem) 4rem;
+  outline: none;
+  min-width: 0;
+}
+
+.menu-toggle {
+  display: none;
+}
+
+.toasts {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1200;
+  display: grid;
+  gap: 0.5rem;
+  max-width: min(26rem, calc(100vw - 2rem));
+}
+
+@media (max-width: 860px) {
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+    position: fixed;
+    inset: 3.5rem 0 0 0;
+    z-index: 1050;
+    overflow-y: auto;
+
+    &.open {
+      display: block;
+    }
+  }
+
+  .connection {
+    font-size: 0.75rem;
+  }
+}

@@ -1,44 +1,60 @@
-<style>
-  :host {
-    display: block;
-    min-height: 100dvh;
-    color: #17202a;
-    background: #f6f8fb;
-    font-family: Arial, Helvetica, sans-serif;
+<a class="skip-link" href="#main-content" (click)="focusMain($event)">Skip to main content</a>
+
+<header class="topbar">
+  <button
+    type="button"
+    class="icon-button menu-toggle"
+    [attr.aria-expanded]="menuOpen()"
+    aria-controls="primary-nav"
+    [attr.aria-label]="menuLabel()"
+    (click)="menuOpen.set(!menuOpen())"
+  >
+    <app-icon [name]="menuOpen() ? 'close' : 'menu'" />
+  </button>
+  <a routerLink="/" class="brand" aria-label="LocalTell Web home">
+    <img ngSrc="icons/icon-64.png" width="36" height="36" alt="" priority class="brand-mark" />
+    <span class="brand-text">LocalTell <span class="brand-sub">Web</span></span>
+  </a>
+  <p class="connection" [class.offline]="!online()" role="status">
+    <span class="dot" aria-hidden="true"></span>
+    {{ online() ? 'Online' : 'Offline – codes, saved places and installed packs still work' }}
+  </p>
+</header>
+
+<div class="layout">
+  <nav id="primary-nav" class="sidebar" [class.open]="menuOpen()" aria-label="Primary">
+    <ul>
+      @for (item of nav; track item.path) {
+        <li>
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
+            ariaCurrentWhenActive="page"
+          >
+            <app-icon [name]="item.icon" />
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <main id="main-content" tabindex="-1">
+    @if (storageError(); as error) {
+      <p class="banner banner-error" role="alert">{{ error }} Location codes still work without storage.</p>
+    }
+    <router-outlet />
+  </main>
+</div>
+
+<div class="toasts" aria-live="polite" aria-atomic="false">
+  @for (notice of notifications.current(); track notice.id) {
+    <div [class]="'toast toast-' + notice.tone">
+      <span>{{ notice.message }}</span>
+      <button type="button" class="icon-button" aria-label="Dismiss notification" (click)="notifications.dismiss(notice.id)">
+        <app-icon name="close" />
+      </button>
+    </div>
   }
-
-  main {
-    display: grid;
-    min-height: 100dvh;
-    place-items: center;
-    padding: 2rem;
-    text-align: center;
-  }
-
-  .intro {
-    max-width: 36rem;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2rem, 6vw, 4rem);
-    font-weight: 700;
-    line-height: 1.1;
-  }
-
-  p {
-    margin: 1rem 0 0;
-    color: #415164;
-    font-size: 1.125rem;
-    line-height: 1.6;
-  }
-</style>
-
-<main>
-  <section class="intro" aria-labelledby="page-title">
-    <h1 id="page-title">LocalTell Web</h1>
-    <p>A simple default project template ready to clone and build from.</p>
-  </section>
-</main>
-
-<router-outlet />
+</div>

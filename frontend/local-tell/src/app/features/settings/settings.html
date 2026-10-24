@@ -1,0 +1,102 @@
+<header class="page-header">
+  <h1>Settings</h1>
+  <p>Local data, preferences, configuration and privacy information for this browser.</p>
+</header>
+
+<div class="grid">
+  <section class="card" aria-labelledby="data-title">
+    <h2 id="data-title">Data stored in this browser</h2>
+    <ul class="list">
+      <li class="row">
+        <span>Saved Places: <strong>{{ saved.places().length }}</strong></span>
+        <button type="button" class="btn btn-small btn-danger" (click)="pending.set('saved')" [disabled]="saved.places().length === 0">Delete all</button>
+      </li>
+      <li class="row">
+        <span>Journey history (from Android): <strong>{{ appData.journeys().length }}</strong></span>
+        <button type="button" class="btn btn-small btn-danger" (click)="pending.set('journeys')" [disabled]="appData.journeys().length === 0">Delete</button>
+      </li>
+      <li class="row">
+        <span>Recent lookups: <strong>{{ recent.recent().length }}</strong></span>
+        <button type="button" class="btn btn-small btn-danger" (click)="pending.set('recent')" [disabled]="recent.recent().length === 0">Clear</button>
+      </li>
+      <li class="row">
+        <span>Location comparisons: <strong>{{ observations.observations().length }}</strong></span>
+        <button type="button" class="btn btn-small btn-danger" (click)="pending.set('observations')" [disabled]="observations.observations().length === 0">Clear</button>
+      </li>
+      <li class="row">
+        <span>Offline packs: <strong>{{ packs.installed().length }}</strong> ({{ packBytes() }})</span>
+        <button type="button" class="btn btn-small btn-danger" (click)="pending.set('packs')" [disabled]="packs.installed().length === 0">Remove all</button>
+      </li>
+    </ul>
+    <p class="small muted">Each category is deleted independently. App updates never reset this data.</p>
+  </section>
+
+  <section class="card" aria-labelledby="prefs-title">
+    <h2 id="prefs-title">Dropbox checks</h2>
+    <label class="checkbox">
+      <input type="checkbox" [checked]="preferences.preferences().dropboxCheckOnOpen" (change)="toggle('dropboxCheckOnOpen')" />
+      <span>Check Dropbox for changes when LocalTell opens (only while connected; never uploads automatically)</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" [checked]="preferences.preferences().dropboxCheckOnReconnect" (change)="toggle('dropboxCheckOnReconnect')" />
+      <span>Check again when the internet connection returns</span>
+    </label>
+    <p class="small muted">
+      Browsers cannot guarantee scheduled background work (for example a daily 2:00 AM backup) when the tab is closed or the computer
+      sleeps, so LocalTell Web offers manual Sync now plus these checks instead.
+    </p>
+    <h3>IP location disclosure</h3>
+    <p class="small">
+      {{ preferences.preferences().ipDisclosureAccepted ? 'Acknowledged.' : 'Not yet acknowledged.' }}
+      @if (preferences.preferences().ipDisclosureAccepted) {
+        <button type="button" class="btn btn-small" (click)="toggle('ipDisclosureAccepted')">Ask again next time</button>
+      }
+    </p>
+  </section>
+
+  <section class="card" aria-labelledby="config-title">
+    <h2 id="config-title">Deployment configuration</h2>
+    <dl class="kv small">
+      <dt>Map tiles</dt>
+      <dd>{{ config.tiles.urlTemplate }}</dd>
+      <dt>IP provider</dt>
+      <dd>{{ config.ipGeolocation.provider === 'none' ? 'Not configured' : config.ipGeolocation.providerName }}</dd>
+      <dt>Dropbox</dt>
+      <dd>{{ dropbox.configured() ? 'Configured (public app key)' : 'Not configured' }}</dd>
+      <dt>Dropbox redirect URI</dt>
+      <dd>{{ dropbox.redirectUri() }}</dd>
+      <dt>Saved Places limit</dt>
+      <dd>{{ config.limits.maxSavedPlaces }}</dd>
+      <dt>Journey retention</dt>
+      <dd>{{ config.limits.maxJourneyPoints }}</dd>
+      <dt>Pack catalogs</dt>
+      <dd>
+        @for (source of config.manifestSources; track source.countryCode) {
+          <div>{{ source.countryName }} ({{ source.layout === 'REGIONS' ? 'regions' : 'flat' }})</div>
+        }
+      </dd>
+    </dl>
+    @if (swEnabled) {
+      <button type="button" class="btn btn-small" (click)="checkForUpdate()">Check for app update</button>
+    } @else {
+      <p class="small muted">Offline app caching is not active in this build or browser.</p>
+    }
+  </section>
+
+  <section class="card" aria-labelledby="privacy-title">
+    <h2 id="privacy-title">Privacy and security</h2>
+    <ul class="small">
+      <li>Codes are generated and decoded locally; no location is sent anywhere unless you open Google Maps or use an online feature.</li>
+      <li>Device location is read only when you press a “Detect” button; there is no background tracking.</li>
+      <li>IP lookup contacts the configured provider only after you confirm the disclosure.</li>
+      <li>Browser storage is not encrypted like Android's private app storage. Anyone with access to this browser profile can read it.</li>
+      <li>.bklt backups are checksummed but not encrypted. Treat them as sensitive location data.</li>
+      <li>Dropbox tokens are kept in session storage (or local storage if you chose to stay signed in) and are never logged or backed up.</li>
+      <li>Map tiles come from {{ tileHost }}, which receives the map areas you view.</li>
+    </ul>
+  </section>
+</div>
+
+<app-confirm-dialog [open]="pending() !== null" [heading]="pendingText()?.title ?? 'Delete data?'" confirmLabel="Delete" [danger]="true" (confirmed)="confirmDelete()" (cancelled)="pending.set(null)">
+  <p>{{ pendingText()?.body }}</p>
+</app-confirm-dialog>

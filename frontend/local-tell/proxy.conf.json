@@ -1,0 +1,9 @@
+{
+  "/data-mirror": {
+    "target": "https://github.com",
+    "secure": true,
+    "changeOrigin": true,
+    "followRedirects": true,
+    "pathRewrite": { "^/data-mirror": "/actionanand/localtell-data/releases/download" }
+  }
+}

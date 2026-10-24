@@ -1,0 +1,16 @@
+[
+  {
+    "countryCode": "IN",
+    "countryName": "India",
+    "packType": "state_ut",
+    "layout": "REGIONS",
+    "manifestUrl": "https://github.com/actionanand/localtell-data/releases/download/cell-data-v3/manifest.json"
+  },
+  {
+    "countryCode": "LK",
+    "countryName": "Sri Lanka",
+    "packType": "province",
+    "layout": "FLAT",
+    "manifestUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/manifest-LK.json"
+  }
+]

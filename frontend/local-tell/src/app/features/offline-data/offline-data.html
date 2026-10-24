@@ -1,0 +1,184 @@
+<header class="page-header">
+  <h1>Offline Data</h1>
+  <p>
+    Geographic packs let LocalTell name the locality of a coordinate without internet. They are separate from the map: packs do
+    not contain map tiles, and codes work worldwide without any pack.
+  </p>
+</header>
+
+<section class="card mb" aria-labelledby="storage-title">
+  <h2 id="storage-title">Browser storage</h2>
+  @if (packs.storage(); as storage) {
+    <dl class="kv">
+      <dt>Used by this site</dt>
+      <dd>{{ formatBytes(storage.usage) }} of about {{ formatBytes(storage.quota) }} available</dd>
+      <dt>Persistent storage</dt>
+      <dd>
+        @if (storage.persisted === true) {
+          <span class="badge badge-success">Granted</span> The browser will not evict data automatically.
+        } @else if (storage.persisted === false) {
+          <span class="badge badge-warning">Not granted</span> The browser may clear packs under storage pressure.
+          <button type="button" class="btn btn-small" (click)="packs.requestPersistentStorage()">Request persistent storage</button>
+        } @else {
+          <span class="muted">Unknown in this browser</span>
+        }
+      </dd>
+      <dt>Installed packs</dt>
+      <dd>{{ packs.installed().length }}</dd>
+    </dl>
+  }
+</section>
+
+<section class="card" aria-labelledby="catalog-title">
+  <div class="group-head">
+    <h2 id="catalog-title">Available packs</h2>
+    <div class="row">
+      <button type="button" class="btn btn-small" (click)="packs.loadCatalog()" [disabled]="packs.catalog().status === 'loading'">
+        <app-icon name="refresh" /> Check for updates
+      </button>
+      <button
+        type="button"
+        class="btn btn-small btn-primary"
+        (click)="askDownload('Download all available packs', allPacks())"
+        [disabled]="required().length === 0"
+      >
+        <app-icon name="download" /> Download all ({{ required().length }})
+      </button>
+      @if (packs.busy()) {
+        <button type="button" class="btn btn-small btn-danger" (click)="packs.cancelAll()">Cancel all</button>
+      }
+    </div>
+  </div>
+
+  @if (!online()) {
+    <p class="banner banner-warning">You are offline. Installed packs keep working; downloads need a connection.</p>
+  }
+
+  @if (packs.catalog(); as state) {
+    @switch (state.status) {
+      @case ('loading') {
+        <p role="status">Loading country catalogs…</p>
+      }
+      @case ('error') {
+        @if (state.status === 'error') {
+          <p class="banner banner-error" role="alert">{{ state.message }}</p>
+        }
+      }
+      @case ('loaded') {
+        @if (state.status === 'loaded') {
+          @for (failure of state.result.failedSources; track failure.source.countryCode) {
+            <p class="banner banner-warning">{{ failure.source.countryName }} catalog unavailable: {{ failure.error }}</p>
+          }
+          @if (state.cachedSources.length > 0) {
+            <p class="banner banner-warning">
+              Showing the saved catalog for {{ state.cachedSources.join(', ') }} because the network request failed.
+            </p>
+          }
+        }
+      }
+    }
+  }
+
+  @if (result()) {
+    <div class="field">
+      <label for="pack-search">Search packs</label>
+      <input id="pack-search" type="search" [formField]="searchForm.query" placeholder="Country, region, state or pack ID" />
+    </div>
+  }
+
+  @for (country of countries(); track country.countryCode) {
+    <section [attr.aria-labelledby]="'country-' + country.countryCode">
+      <div class="group-head">
+        <h3 [id]="'country-' + country.countryCode">
+          {{ country.countryName }} <span class="muted small">({{ country.packs.length }} packs)</span>
+        </h3>
+        <div class="row">
+          <button
+            type="button"
+            class="btn btn-small"
+            (click)="askDownload('Download all packs for ' + country.countryName, country.packs)"
+            [disabled]="requiredIn(country.packs) === 0"
+          >
+            Download country ({{ requiredIn(country.packs) }})
+          </button>
+          @if (installedIn(country.packs).length > 0) {
+            <button
+              type="button"
+              class="btn btn-small btn-danger"
+              (click)="confirmDelete.set({ ids: installedIn(country.packs), label: 'installed ' + country.countryName + ' packs' })"
+            >
+              Remove installed
+            </button>
+          }
+        </div>
+      </div>
+      @if (country.layout === 'REGIONS') {
+        @for (region of regions(country); track region.region.manifestKey) {
+          <div class="group-head">
+            <h4>{{ region.region.displayName }}</h4>
+            <button
+              type="button"
+              class="btn btn-small"
+              (click)="askDownload('Download ' + region.region.displayName, region.packs)"
+              [disabled]="requiredIn(region.packs) === 0"
+            >
+              Download region ({{ requiredIn(region.packs) }})
+            </button>
+          </div>
+          <app-pack-list [packs]="region.packs" (removeRequested)="confirmDelete.set({ ids: [$event.id], label: $event.name })" />
+        }
+      } @else {
+        <app-pack-list [packs]="country.packs" (removeRequested)="confirmDelete.set({ ids: [$event.id], label: $event.name })" />
+      }
+    </section>
+  } @empty {
+    @if (result()) {
+      <p class="muted">No packs match your search.</p>
+    }
+  }
+
+  @if (orphans().length > 0) {
+    <h3>Installed packs no longer in the catalog</h3>
+    <ul class="list">
+      @for (record of orphans(); track record.id) {
+        <li class="row">
+          <span>{{ record.name }} <span class="muted small">{{ record.id }} v{{ record.version }} · {{ record.installedAt | date: 'mediumDate' }}</span></span>
+          <button type="button" class="btn btn-small btn-danger" (click)="confirmDelete.set({ ids: [record.id], label: record.name })">Remove</button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<app-confirm-dialog
+  [open]="confirmDownload() !== null"
+  [heading]="confirmDownload()?.title ?? 'Download packs'"
+  confirmLabel="Start download"
+  (confirmed)="startConfirmedDownload()"
+  (cancelled)="confirmDownload.set(null)"
+>
+  @if (confirmTotals(); as totals) {
+    <p>
+      {{ confirmCount() }} pack(s) will be downloaded: about <strong>{{ formatBytes(totals.compressedBytes) }}</strong> of network
+      data, using about <strong>{{ formatBytes(totals.uncompressedBytes) }}</strong> of browser storage once installed.
+    </p>
+    <p class="small muted">
+      Packs download one at a time and are verified with SHA-256 before use. Browsers can clear site data under storage pressure
+      unless persistent storage is granted; you may be asked to allow it.
+    </p>
+  }
+</app-confirm-dialog>
+
+<app-confirm-dialog
+  [open]="confirmDelete() !== null"
+  heading="Remove offline data?"
+  confirmLabel="Remove"
+  [danger]="true"
+  (confirmed)="deleteConfirmed()"
+  (cancelled)="confirmDelete.set(null)"
+>
+  <p>
+    Remove {{ confirmDelete()?.label }} from this browser? Locality names will no longer be available offline for those areas. Codes
+    keep working.
+  </p>
+</app-confirm-dialog>

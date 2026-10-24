@@ -1,16 +1,117 @@
 # LocalTell Web
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.7.
+Offline-first Angular 22 companion to the LocalTell Android app. Main use: someone reads you a
+19-digit or 15-character LocalTell code over the phone, you decode it, see it on a map and open
+Google Maps. The reverse also works: click the map or paste a Google Maps link to generate both
+codes.
 
-## Development server
+## Architecture
 
-To start a local development server, run:
+| Area | Location | Notes |
+|---|---|---|
+| Location codes | `src/app/core/location-code/` | Exact BigInt port of Android `LocalTellLocationCode.kt` (V1). |
+| Input parsing | `src/app/core/location-input/`, `core/maps-links/` | Port of `LocationInputParser.kt`; strict Google Maps / `geo:` link parser. |
+| Offline packs | `core/geographic-packs/`, `core/offline-resolver/` | Manifest/catalog port, SHA-256 + bounded gunzip, sql.js in Web Workers, Android resolver port. |
+| Saved Places / backup | `core/saved-places/`, `core/backup/` | Android identity/merge rules, strict `.bklt` codec (schema 1). |
+| Dropbox | `core/dropbox/` | Official SDK, OAuth code + PKCE, verified append-only uploads. |
+| Storage | `core/storage/idb.ts` | Versioned IndexedDB with additive migrations. |
+| Features | `src/app/features/*` | Lazy-loaded standalone routes. |
+
+Configuration lives in `src/environments/` and `src/config/manifest-sources.json`. Nothing in browser
+configuration is secret.
+
+## Requirements
+
+- Node.js `>=22.22.3` (CI uses `.nvmrc`, 24.16.0); npm 10+.
+- Install with `npm ci` inside `frontend/local-tell` (not the repository root).
+
+## Commands
 
 ```bash
-npm run develop
+npm run develop        # dev server on http://localhost:3041 (proxies /data-mirror to GitHub Releases)
+npm run build          # production build
+npm run build:gh       # production build with base href /localtell-data/ (override with BASE_HREF=/x/)
+npm run mirror:data    # copy manifests + SHA-256-verified packs into dist/.../data-mirror
+npm run lint
+npm run test:ci        # Vitest unit tests (codec golden vectors, backup, resolver, Dropbox policy)
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:3041/`. The application will automatically reload whenever you modify any of the source files.
+## Works offline vs needs internet
+
+| Offline (after first load) | Needs internet |
+|---|---|
+| Encode/decode both LocalTell codes | Map tiles |
+| Coordinate and Maps-link parsing | Pack catalog and downloads |
+| Saved Places, recent lookups, comparisons history | IP location |
+| Locality lookup from installed packs | Dropbox, opening Google Maps |
+
+Decoding never depends on tiles, packs or the network.
+
+## Geographic packs and hosting
+
+GitHub Release download URLs send no CORS headers (verified with `curl`), so a browser cannot fetch
+them directly. `downloadMirrors` rewrites the exact prefix
+`https://github.com/actionanand/localtell-data/releases/download/` to `data-mirror/` relative to the
+base href. In development `proxy.conf.json` serves that path; on GitHub Pages the workflow runs
+`npm run mirror:data`, which verifies each pack's SHA-256 against the manifest before publishing.
+The client re-verifies SHA-256, decompresses with size bounds, runs `PRAGMA integrity_check` and the
+schema-v3 contract, then activates the pack in one IndexedDB transaction, so a failed or cancelled
+update keeps the previous version. Only schema-v3 (geographic) packs are usable in a browser.
+
+Add a country by appending to `src/config/manifest-sources.json` (`layout` `FLAT`, or `REGIONS` for India).
+
+## Map tiles
+
+`environment.tiles` defaults to the public OpenStreetMap tile server with attribution. That server
+is not for heavy production traffic ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/));
+configure your own provider for real deployments. Tiles are never prefetched.
+
+## IP location
+
+`environment.ipGeolocation.provider` is `ipapi-co`, `ipwho-is` or `none`. A request is sent only when
+the user asks, after a disclosure that the provider sees their IP. Results are approximate, and the
+comparison screen does not claim to detect a VPN.
+
+## Dropbox
+
+1. In the existing LocalTell app in the [Dropbox App Console](https://www.dropbox.com/developers/apps)
+   (App Folder access), add the redirect URI, e.g.
+   `https://actionanand.github.io/localtell-data/dropbox/callback` and `http://localhost:3041/dropbox/callback`.
+2. Keep scopes `account_info.read`, `files.metadata.read`, `files.content.read`, `files.content.write`.
+3. Put the public **App key** in `environment.dropbox.appKey`. Never add the app secret. Set
+   `redirectUri` only if it differs from `<origin><base href>dropbox/callback`.
+
+Backups go in `/localtell-managed-backups`, shown as *Apps / LocalTell / localtell-managed-backups*.
+Dropbox owns the App Folder root, so it cannot be moved under *Apps / AR Apps*. Tokens are kept in
+`sessionStorage` by default. "Remember on this browser" uses `localStorage`, where any script on
+the origin can read them.
+
+The web app never deletes, renames or overwrites Dropbox files. Uploads use add mode with
+`strict_conflict`, then download the exact revision to verify it. Retention cleanup is not
+implemented, so backups created here are never removed by the web app. Restores show a preview
+and need confirmation. When local and remote data differ, you choose what happens.
+
+## `.bklt` compatibility
+
+Android's `.bklt` envelope (`localtell-backup`, schema 1, string payload, SHA-256 of the UTF-8
+payload, 12 MiB cap, strict JSON) is ported with Android's tests. It contains Saved Places and
+Journey data only. 64-bit cell IDs are preserved as strings. Web-only data (comparisons, recent
+lookups, packs, settings) is never written into `.bklt`. The format is checksummed, **not
+encrypted**. Browser storage is also not equivalent to Android's encrypted storage.
+
+## Supported Maps links
+
+`/maps/search/?api=1&query=lat,lng`, `?q=` / `?q=loc:`, `/maps/place/lat,lng`, DMS place paths,
+`!3d…!4d…` marker data, `/maps/dir/…` (last waypoint), `destination=` / `daddr=` and `geo:` URIs.
+A viewport-only `/@lat,lng,z` link needs confirmation. Short `maps.app.goo.gl` links cannot be
+resolved in a browser (CORS); open them, then paste the full link or the coordinates.
+
+## Known limitations
+
+- Browsers cannot run Android-style exact background schedules. Dropbox sync is manual, with
+  optional checks when the app opens or the connection returns.
+- Browser storage can be evicted. Request persistent storage from Offline Data.
+- Device location may come from GPS, Wi-Fi or network data, depending on the browser.
 
 ## Cloning Guide
 

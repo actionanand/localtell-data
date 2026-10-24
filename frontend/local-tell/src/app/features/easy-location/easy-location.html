@@ -1,0 +1,74 @@
+<header class="page-header">
+  <h1>Easy Location</h1>
+  <p>
+    Type or paste what the caller tells you: a 19-digit LocalTell code, a 15-character short code, “latitude, longitude” or a Google
+    Maps link. Decoding works offline and never needs a map or a data pack.
+  </p>
+</header>
+
+<div class="split">
+  <div class="stack">
+    <form class="card" (submit)="submit($event)" novalidate>
+      <div class="field">
+        <label for="easy-query">Code, coordinates or Google Maps link</label>
+        <input
+          #queryInput
+          id="easy-query"
+          type="text"
+          class="big-input"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          inputmode="text"
+          [formField]="queryForm.query"
+          [attr.aria-invalid]="error() ? 'true' : null"
+          aria-describedby="easy-hint easy-error"
+          data-testid="easy-input"
+        />
+        <span id="easy-hint" class="hint">Examples: 0 370 697 756 405 661 642 · 23G93-PU3ER-X2S3P · 12.971598, 77.594566</span>
+      </div>
+      <div id="easy-error" aria-live="assertive">
+        @if (error(); as message) {
+          <p class="banner banner-error" data-testid="easy-error">{{ message }}</p>
+        }
+      </div>
+      <div class="row">
+        <button type="submit" class="btn btn-primary" data-testid="easy-submit"><app-icon name="search" /> Find location</button>
+        <button type="button" class="btn" (click)="detect()" [disabled]="device().status === 'locating'">
+          <app-icon name="locate" /> {{ device().status === 'locating' ? 'Locating…' : 'Detect my location' }}
+        </button>
+      </div>
+      @if (device(); as state) {
+        @if (state.status === 'error') {
+          <p class="banner banner-warning small" role="status">{{ state.message }}</p>
+        }
+      }
+    </form>
+
+    @if (pending(); as point) {
+      <section class="card" aria-labelledby="confirm-title">
+        <h2 id="confirm-title"><app-icon name="warning" /> Confirm this point</h2>
+        <p>{{ point.message }}</p>
+        <p class="code-value">{{ pendingText() }}</p>
+        <div class="row">
+          <button type="button" class="btn btn-primary" (click)="confirmPending()">Use this point</button>
+          <button type="button" class="btn" (click)="pending.set(null)">Cancel</button>
+        </div>
+      </section>
+    }
+
+    @if (selected(); as location) {
+      <app-location-result [location]="location" [locality]="locality()" (cleared)="clear()" />
+    } @else if (!pending()) {
+      <section class="card">
+        <h2>No location yet</h2>
+        <p class="muted">Enter a code above, click the map, or detect your own location to generate both LocalTell codes.</p>
+      </section>
+    }
+  </div>
+
+  <section class="card" aria-labelledby="easy-map-title">
+    <h2 id="easy-map-title"><app-icon name="map" /> Map</h2>
+    <app-map-view [markers]="markers()" activeId="current" [selectable]="true" ariaLabel="Location map" (mapClick)="onMapClick($event)" />
+  </section>
+</div>

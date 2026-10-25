@@ -1,0 +1,104 @@
+<header class="page-header">
+  <h1>Saved Places</h1>
+  <p>
+    Places are stored only in this browser (IndexedDB). They use the same fields and duplicate rules as the Android app, so they can
+    be exchanged through <a routerLink="/backup">.bklt backups</a>.
+  </p>
+</header>
+
+@if (saved.overLimit()) {
+  <p class="banner banner-warning" role="status">
+    You have {{ saved.places().length }} places but the limit is {{ saved.limit }}. Nothing was removed; delete places to save new ones.
+  </p>
+}
+
+<section class="card mb">
+  <div class="filters">
+    <div class="field">
+      <label for="saved-search">Search</label>
+      <input id="saved-search" type="search" [formField]="filterForm.query" placeholder="Name, locality, district or state" />
+    </div>
+    <div class="field">
+      <label for="saved-sort">Sort by</label>
+      <select id="saved-sort" [formField]="filterForm.sort">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="name-asc">Name A–Z</option>
+        <option value="name-desc">Name Z–A</option>
+      </select>
+    </div>
+  </div>
+  <p class="small muted" role="status">{{ views().length }} of {{ saved.places().length }} shown · limit {{ saved.limit }}</p>
+</section>
+
+@if (!saved.loaded()) {
+  <p role="status">Loading saved places…</p>
+} @else if (saved.places().length === 0) {
+  <section class="card">
+    <h2>No saved places yet</h2>
+    <p class="muted">Use “Save location” on any result, or restore a .bklt backup from the Android app.</p>
+    <a routerLink="/easy" class="btn btn-primary">Find a location</a>
+  </section>
+} @else {
+  <ul class="list" aria-label="Saved places">
+    @for (view of views(); track view.place.id) {
+      <li [attr.data-testid]="'saved-' + view.place.id">
+        <div class="place-head">
+          <div>
+            @if (renaming() === view.place.id) {
+              <form (submit)="commitRename($event, view.place)" class="row">
+                <label class="visually-hidden" [for]="'rename-' + view.place.id">New name</label>
+                <input [id]="'rename-' + view.place.id" type="text" [formField]="renameForm.name" [attr.aria-invalid]="renameError() ? 'true' : null" />
+                <button type="submit" class="btn btn-small btn-primary">Save name</button>
+                <button type="button" class="btn btn-small" (click)="renaming.set(null)">Cancel</button>
+              </form>
+              @if (renameError(); as message) {
+                <p class="banner banner-error small" role="alert">{{ message }}</p>
+              }
+            } @else {
+              <h2 class="h3">{{ view.place.displayName }}</h2>
+            }
+            @if (view.hierarchy) {
+              <p class="small">{{ view.place.localityName }}{{ view.place.localityName ? ', ' : '' }}{{ view.hierarchy }}</p>
+            }
+            <p class="small muted">
+              {{ view.coordinates }} · {{ sourceLabels[view.place.source] }} · saved {{ view.place.savedAt | date: 'medium' }}
+              @if (view.place.accuracyMetres !== null) {
+                · ±{{ view.place.accuracyMetres }} m
+              }
+            </p>
+          </div>
+          <div class="row">
+            <a class="btn btn-small" routerLink="/map" [queryParams]="{ saved: view.place.id }"><app-icon name="map" /> Map</a>
+            <a class="btn btn-small" [href]="view.mapsUrl" target="_blank" rel="noopener noreferrer"><app-icon name="external" /> Google Maps</a>
+            <button type="button" class="btn btn-small" [attr.aria-expanded]="expanded() === view.place.id" (click)="expanded.set(expanded() === view.place.id ? null : view.place.id)">
+              Codes
+            </button>
+            <button type="button" class="btn btn-small" (click)="startRename(view.place)" [attr.aria-label]="'Rename ' + view.place.displayName"><app-icon name="edit" /></button>
+            <button type="button" class="btn btn-small btn-danger" (click)="pendingDelete.set(view.place)" [attr.aria-label]="'Delete ' + view.place.displayName"><app-icon name="trash" /></button>
+          </div>
+        </div>
+        @if (expanded() === view.place.id) {
+          <dl class="kv">
+            <dt>19-digit code</dt>
+            <dd>
+              <span class="code-value">{{ view.numericCode }}</span>
+              <button type="button" class="btn btn-small" (click)="copy(view.numericCode, 'Numeric code')"><app-icon name="copy" /> Copy</button>
+            </dd>
+            <dt>15-character code</dt>
+            <dd>
+              <span class="code-value">{{ view.shortCode }}</span>
+              <button type="button" class="btn btn-small" (click)="copy(view.shortCode, 'Short code')"><app-icon name="copy" /> Copy</button>
+            </dd>
+          </dl>
+        }
+      </li>
+    } @empty {
+      <li class="muted">No saved places match your search.</li>
+    }
+  </ul>
+}
+
+<app-confirm-dialog [open]="pendingDelete() !== null" heading="Delete saved place?" confirmLabel="Delete" [danger]="true" (confirmed)="confirmDelete()" (cancelled)="pendingDelete.set(null)">
+  <p>Delete “{{ pendingDelete()?.displayName }}” from this browser? Backups in Dropbox or on other devices are not changed.</p>
+</app-confirm-dialog>

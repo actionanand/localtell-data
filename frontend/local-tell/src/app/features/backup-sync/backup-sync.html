@@ -1,0 +1,248 @@
+<header class="page-header">
+  <h1>Dropbox Backup</h1>
+  <p>
+    Back up and restore Saved Places and Journey history using the same <code>.bklt</code> format as the Android app. Backups are
+    checksummed but <strong>not encrypted</strong>: they contain your saved coordinates, so keep them private.
+  </p>
+</header>
+
+<div aria-live="assertive">
+  @if (error(); as message) {
+    <p class="banner banner-error" data-testid="backup-error">{{ message }}</p>
+  }
+</div>
+
+<div class="split">
+  <div class="stack">
+    <section class="card" aria-labelledby="dbx-connection">
+      <h2 id="dbx-connection"><app-icon name="cloud" /> Dropbox connection</h2>
+      @switch (connection().status) {
+        @case ('unconfigured') {
+          <p>Dropbox is not configured for this deployment (no public Dropbox app key). Local file backup below still works.</p>
+        }
+        @case ('connected') {
+          <p>
+            <span class="badge badge-success">Connected</span> {{ connection().accountName }}
+            <span class="small muted">· {{ connection().persistent ? 'remembered on this browser' : 'until this tab closes' }}</span>
+          </p>
+          <p class="small muted">
+            Backups live in <code>{{ managedDirectory }}</code> inside the LocalTell App Folder, usually shown as
+            <strong>Apps / LocalTell / localtell-managed-backups</strong>. Dropbox decides the App Folder location.
+          </p>
+          <button type="button" class="btn btn-danger" (click)="confirmDisconnect.set(true)" [disabled]="backup.isBusy()">Disconnect</button>
+        }
+        @case ('connecting') {
+          <p role="status">Connecting to Dropbox…</p>
+        }
+        @case ('disconnecting') {
+          <p role="status">Disconnecting…</p>
+        }
+        @default {
+          @if (connection().status === 'failed' || connection().status === 'reauthorization-required') {
+            <p class="banner banner-warning" role="alert">{{ connection().message }}</p>
+          }
+          <p>Connect the same Dropbox account you use in the Android app to see its LocalTell backups.</p>
+          <label class="checkbox small">
+            <input type="checkbox" [checked]="rememberSignIn()" (change)="rememberSignIn.set(!rememberSignIn())" />
+            <span
+              >Keep me signed in on this browser. The Dropbox refresh token is then stored in this browser's local storage, where
+              other scripts on this site or anyone using this browser profile could read it. Leave unchecked on shared
+              computers.</span
+            >
+          </label>
+          <div class="row">
+            <button type="button" class="btn btn-primary" (click)="connect()" [disabled]="!online()">Connect Dropbox</button>
+            @if (connection().status === 'failed') {
+              <button type="button" class="btn" (click)="auth.retry()">Retry</button>
+            }
+          </div>
+          @if (connection().message && connection().status === 'disconnected') {
+            <p class="small muted" role="status">{{ connection().message }}</p>
+          }
+        }
+      }
+    </section>
+
+    @if (auth.connected()) {
+      <section class="card" aria-labelledby="dbx-sync">
+        <h2 id="dbx-sync"><app-icon name="refresh" /> Sync</h2>
+        <p role="status">{{ statusText() }}</p>
+        @if (savedPlaces.excess() > 0) {
+          <div class="banner banner-warning" role="alert">
+            <p>
+              Saved Places has {{ savedPlaces.places().length }} entries but the limit is {{ savedPlaces.limit }}. Dropbox sync and new
+              saves are paused until it is within the limit. Nothing is removed automatically.
+            </p>
+            <div class="row">
+              <button type="button" class="btn" (click)="confirmOverflow.set(true)">Remove {{ savedPlaces.excess() }} oldest</button>
+              <a class="btn" routerLink="/saved">Delete places manually</a>
+            </div>
+          </div>
+        }
+        <dl class="kv small">
+          <dt>Last successful backup</dt>
+          <dd>{{ meta().lastSuccessfulBackupAt ? (meta().lastSuccessfulBackupAt | date: 'medium') : '—' }}</dd>
+          <dt>Last restore</dt>
+          <dd>{{ meta().lastRestoreAt ? (meta().lastRestoreAt | date: 'medium') : '—' }}</dd>
+          <dt>Last attempt</dt>
+          <dd>
+            {{ meta().lastAttemptAt ? (meta().lastAttemptAt | date: 'medium') : '—' }}
+            @if (meta().lastAttemptResult) {
+              · {{ meta().lastAttemptResult }}
+            }
+          </dd>
+          <dt>Last check</dt>
+          <dd>{{ meta().lastCheckAt ? (meta().lastCheckAt | date: 'medium') : '—' }}</dd>
+        </dl>
+        <div class="row">
+          <button type="button" class="btn btn-primary" (click)="syncNow()" [disabled]="backup.isBusy() || !online()" data-testid="sync-now">
+            <app-icon name="refresh" /> Sync now
+          </button>
+          <button type="button" class="btn" (click)="check()" [disabled]="backup.isBusy() || !online()">Check Dropbox</button>
+          <button type="button" class="btn" (click)="refresh()" [disabled]="backup.isBusy() || !online()">Refresh list</button>
+        </div>
+        @if (backup.busy(); as label) {
+          <p role="status" class="small">{{ label }}…</p>
+        }
+        <p class="small muted">
+          Sync never overwrites or deletes Dropbox files: each backup is a new file. When both sides changed you choose what to do.
+          Browsers cannot run exact scheduled backups; use Sync now, or enable checks on open in <a routerLink="/settings">Settings</a>.
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="dbx-history">
+        <h2 id="dbx-history">Backup history</h2>
+        <ul class="list">
+          @for (entry of backup.files(); track entry.file.id) {
+            <li>
+              <strong class="small">{{ entry.file.name }}</strong>
+              <div class="small muted">
+                {{ entry.file.modifiedAtMillis | date: 'medium' }} · {{ entry.file.size / 1024 | number: '1.0-1' }} KB
+                @if (entry.ownedByThisBrowser) {
+                  · <span class="badge badge-info">Created by this browser</span>
+                }
+              </div>
+              <button type="button" class="btn btn-small" (click)="inspect(entry.file)" [disabled]="backup.isBusy()">Preview &amp; restore</button>
+            </li>
+          } @empty {
+            <li class="muted">No backups listed. Press “Refresh list”.</li>
+          }
+        </ul>
+        <p class="small muted">The web app never deletes Dropbox backups; manage old files in Dropbox itself.</p>
+      </section>
+    }
+  </div>
+
+  <div class="stack">
+    @if (offer(); as current) {
+      <section class="card" aria-labelledby="offer-title" data-testid="restore-offer">
+        <h2 id="offer-title">
+          @switch (current.kind) {
+            @case ('conflict') {
+              Different data on both sides
+            }
+            @case ('restore-offer') {
+              Restore Dropbox backup?
+            }
+            @default {
+              Backup preview
+            }
+          }
+        </h2>
+        <p class="small">
+          {{ current.file.name }} · {{ current.file.modifiedAtMillis | date: 'medium' }} · {{ current.data.savedPlaces.length }} places,
+          {{ current.data.journeys.length }} Journey records
+        </p>
+        <app-restore-preview [plan]="current.plan" [savedLimit]="savedPlaces.limit" />
+        <div class="row">
+          @if (current.kind === 'conflict') {
+            <button type="button" class="btn btn-primary" (click)="applyOffer(true)" [disabled]="backup.isBusy() || !current.plan.saved.fits">
+              Merge Dropbox backup
+            </button>
+            <button type="button" class="btn" (click)="keepLocal()" [disabled]="backup.isBusy()">Use this browser's data</button>
+          } @else {
+            <button type="button" class="btn btn-primary" (click)="applyOffer(false)" [disabled]="backup.isBusy() || !current.plan.saved.fits">
+              {{ current.kind === 'restore-offer' ? 'Restore backup' : 'Merge into this browser' }}
+            </button>
+          }
+          <button type="button" class="btn" (click)="offer.set(null)">Cancel</button>
+        </div>
+        <p class="small muted">Restoring only reads from Dropbox. “Use this browser's data” uploads a new backup and leaves existing files untouched.</p>
+      </section>
+    }
+
+    <section class="card" aria-labelledby="file-backup">
+      <h2 id="file-backup"><app-icon name="upload" /> Backup file on this computer</h2>
+      <p class="small muted">Works offline and without Dropbox. Includes Saved Places and Journey history only.</p>
+      <div class="row">
+        <button type="button" class="btn" (click)="exportFile()"><app-icon name="download" /> Save .bklt file</button>
+        <button type="button" class="btn" (click)="fileInput.click()"><app-icon name="upload" /> Restore from .bklt file</button>
+        <input #fileInput hidden type="file" accept=".bklt" aria-label="Choose a .bklt backup file" (change)="importFile($event)" data-testid="bklt-input" />
+      </div>
+      @if (fileImport(); as pending) {
+        <div class="stack" data-testid="file-preview">
+          <h3>Preview: {{ pending.name }}</h3>
+          <app-restore-preview [plan]="pending.plan" [savedLimit]="savedPlaces.limit" />
+          <div class="row">
+            <button type="button" class="btn btn-primary" (click)="confirmFileImport()" [disabled]="!pending.plan.saved.fits">Restore</button>
+            <button type="button" class="btn" (click)="fileImport.set(null)">Cancel</button>
+          </div>
+        </div>
+      }
+    </section>
+
+    <section class="card" aria-labelledby="journey-title">
+      <h2 id="journey-title">Journey history from Android</h2>
+      <p class="small">
+        {{ journeyCount() }} record(s). The browser cannot record cellular Journey data; these come from restored Android backups and are
+        kept so they round-trip faithfully.
+      </p>
+      @if (journeyCount() > 0) {
+        <button type="button" class="btn btn-small" [attr.aria-expanded]="showJourneys()" (click)="showJourneys.set(!showJourneys())">
+          {{ showJourneys() ? 'Hide' : 'Show' }} records
+        </button>
+        @if (showJourneys()) {
+          <ul class="list small">
+            @for (point of appData.journeys(); track point.id) {
+              <li>
+                <strong>{{ point.areaName }}</strong> {{ point.district ?? '' }} · {{ point.timestamp | date: 'medium' }} · {{ point.radio }}
+                {{ point.plmn }} cell {{ point.cellId }}
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+
+    @if (backup.diagnostics().length > 0) {
+      <details class="card">
+        <summary>Connection and transfer diagnostics</summary>
+        <ol class="small">
+          @for (entry of backup.diagnostics(); track $index) {
+            <li>{{ entry.at | date: 'HH:mm:ss' }} · {{ entry.stage }} · {{ entry.detail }}</li>
+          }
+        </ol>
+      </details>
+    }
+  </div>
+</div>
+
+<app-confirm-dialog [open]="confirmDisconnect()" heading="Disconnect Dropbox?" confirmLabel="Disconnect" [danger]="true" (confirmed)="disconnect()" (cancelled)="confirmDisconnect.set(false)">
+  <p>
+    This browser forgets its Dropbox sign-in and asks Dropbox to revoke it. Your Saved Places, downloaded packs and every backup in
+    Dropbox are kept.
+  </p>
+</app-confirm-dialog>
+
+<app-confirm-dialog
+  [open]="confirmOverflow()"
+  heading="Remove the oldest extra saved places?"
+  [confirmLabel]="'Remove ' + savedPlaces.excess()"
+  [danger]="true"
+  (confirmed)="removeOverflow()"
+  (cancelled)="confirmOverflow.set(false)"
+>
+  <p>
+    Only the {{ savedPlaces.excess() }} oldest saved places in this browser are deleted. Backups in Dropbox are not changed.
+  </p>
+</app-confirm-dialog>

@@ -1,0 +1,65 @@
+package com.actionanand.localtell.app.backup
+
+import com.actionanand.localtell.app.journey.JourneyPoint
+import com.actionanand.localtell.app.saved.BackupFileFormat
+import com.actionanand.localtell.app.saved.SavedPlace
+import com.actionanand.localtell.app.saved.SavedPlaceSource
+import java.io.File
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+/** Temporary generator run in a scratch copy of the Android repo; never committed to it. */
+class WebFixtureGeneratorTest {
+    private val out = File(System.getenv("LT_FIXTURE_DIR") ?: "build/web-fixtures").apply { mkdirs() }
+
+    private fun place(id: String, name: String, locality: String?, lat: Double, lon: Double, source: SavedPlaceSource,
+                      accuracy: Float?, savedAt: Long = 1_700_000_000_000, district: String? = null, state: String? = null,
+                      country: String? = null) =
+        SavedPlace(id, name, locality, null, district, state, country, lat, lon, savedAt, source, accuracy)
+
+    private fun point(n: Int, cellId: Long = 4_367_237_120, lat: Double? = 8.181910123, lon: Double? = 77.352330456,
+                      accuracy: Float? = 12.75f, sub: String? = "Kalkulam") =
+        JourneyPoint(n.toLong(), 1_700_000_000_000 + n, "Nagercoil $n", "Kanniyakumari", "Tamil Nadu", "NR", "405-869",
+            cellId, 100, lat, lon, accuracy, sub)
+
+    private val manifest = JSONArray()
+
+    private fun write(name: String, data: AppBackupData) {
+        val text = AppBackupCodec.encode(data)
+        File(out, name).writeText(text, Charsets.UTF_8)
+        assertEquals(data.savedPlaces, BackupFileFormat.decode(name, text.toByteArray(Charsets.UTF_8)).savedPlaces)
+        manifest.put(JSONObject().put("file", name).put("fingerprint", AppBackupCodec.fingerprint(data))
+            .put("savedPlaces", data.savedPlaces.size).put("journeys", data.journeys.size))
+    }
+
+    @Test fun generate() {
+        write("LocalTell-android-plain.bklt", AppBackupData(
+            listOf(place("plain-1", "Nagercoil", "Nagercoil", 8.18, 77.41, SavedPlaceSource.HOME, 12.75f, district = "Kanniyakumari", state = "Tamil Nadu", country = "IN")),
+            listOf(point(1), point(2, cellId = Long.MAX_VALUE)),
+        ))
+        write("LocalTell-android-unicode.bklt", AppBackupData(
+            listOf(
+                place("fixture", "நாகர்கோவில் / स्थानम्", "Nagercoil", 8.18, 77.41, SavedPlaceSource.HOME, 12.75f, district = "Kanniyakumari", state = "Tamil Nadu", country = "IN"),
+                place("coord-only", "-33.868820, 151.209296", null, -33.868820123, 151.209296789, SavedPlaceSource.LOOKUP, 3.2f, savedAt = 1_700_000_000_123),
+                place("tiny", "Near null island", null, 0.0001, -0.00005, SavedPlaceSource.EASY, null, savedAt = 1_700_000_000_456),
+            ),
+            listOf(point(3, lat = null, lon = null, accuracy = null, sub = null), point(4)),
+        ))
+        write("LocalTell-android-over-limit.bklt", AppBackupData(
+            (1..35).map { place("over-$it", "Place $it", "Place $it", 8.0 + it * 0.01, 77.0, SavedPlaceSource.EASY, null, savedAt = 1_700_000_000_000 + it * 1000L) },
+            emptyList(),
+        ))
+        File(out, "fixtures.json").writeText(JSONObject().put("generator", "AppBackupCodec.kt (JVM unit test, org.json 20240303)")
+            .put("fixtures", manifest).toString(2))
+        out.listFiles { file -> file.name.startsWith("web-") && file.name.endsWith(".bklt") }?.forEach { file ->
+            val decoded = BackupFileFormat.decode(file.name, file.readBytes())
+            File(out, "${file.name}.android-decoded.json").writeText(JSONObject()
+                .put("savedPlaces", decoded.savedPlaces.size).put("journeys", decoded.journeys.size)
+                .put("fingerprint", AppBackupCodec.fingerprint(decoded))
+                .put("cellIds", JSONArray(decoded.journeys.map { it.cellId.toString() }))
+                .put("names", JSONArray(decoded.savedPlaces.map { it.displayName })).toString(2))
+        }
+    }
+}

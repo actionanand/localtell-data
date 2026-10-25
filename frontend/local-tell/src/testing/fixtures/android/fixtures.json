@@ -1,0 +1,23 @@
+{
+  "generator": "AppBackupCodec.kt (JVM unit test, org.json 20240303)",
+  "fixtures": [
+    {
+      "journeys": 2,
+      "file": "LocalTell-android-plain.bklt",
+      "savedPlaces": 1,
+      "fingerprint": "256da346d3090dd037fea75248bf35b9b610d962c2ccdf1cff76e4d7b7cd0e13"
+    },
+    {
+      "journeys": 2,
+      "file": "LocalTell-android-unicode.bklt",
+      "savedPlaces": 3,
+      "fingerprint": "ed9ada6c317d7f9ccf19dcde2cefb9637dd854db959262559bfbeaf4e8aaf81b"
+    },
+    {
+      "journeys": 0,
+      "file": "LocalTell-android-over-limit.bklt",
+      "savedPlaces": 35,
+      "fingerprint": "06ee7b6fcf82b19663c9f4e666a2108f596d13b16154bfc3ac70be60f5c2a018"
+    }
+  ]
+}

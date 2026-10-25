@@ -1,0 +1,87 @@
+name: LocalTell Web
+
+on:
+  pull_request:
+    branches: [main-github]
+  push:
+    branches: [main-github]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to GitHub Pages (only honoured on main-github)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: localtell-web-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend/local-tell
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/local-tell/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/local-tell/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run test:ci
+
+      - name: Inject public Dropbox App key
+        run: node scripts/inject-dropbox-key.mjs
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
+
+      - name: Build for GitHub Pages
+        run: npm run build:gh
+        env:
+          BASE_HREF: /localtell-data/
+
+      - name: Verify Dropbox production configuration
+        run: node scripts/inject-dropbox-key.mjs --verify
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
+
+      - name: Mirror verified geographic packs (same-origin downloads)
+        run: npm run mirror:data
+
+      - name: Browser integration tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+        env:
+          E2E_PACKS: '1'
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/local-tell/dist/local-tell/browser
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

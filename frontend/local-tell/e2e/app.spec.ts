@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
+import { shellManifest, shellState, waitForOfflineShell, withOfflineDiagnostics } from './offline-shell';
 import type { BrowserContext, Page } from '@playwright/test';
 
 const NUMERIC = '0 370 697 756 405 661 642';
@@ -88,32 +89,66 @@ test('keeps decoding while the browser is offline', async ({ page, context }) =>
   await context.setOffline(false);
 });
 
-test('reloads the app shell offline from the service worker cache', async ({ page, context }) => {
+test('reloads the app shell offline from the service worker cache', async ({ page, context }, info) => {
   test.slow();
-  await page.goto('./');
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
+  await withOfflineDiagnostics(page, context, info, async (record) => {
+    await page.goto('./');
+    const manifest = await shellManifest(page);
+    await waitForOfflineShell(page, manifest);
+    await context.setOffline(true);
+    for (const path of ['./', 'easy']) {
+      const navigation = await page.goto(path);
+      record(navigation);
+      expect(navigation?.status()).toBe(200);
+      expect(navigation?.fromServiceWorker()).toBe(true);
+      const response = await page.reload();
+      record(response);
+      expect(response?.status()).toBe(200);
+      expect(response?.fromServiceWorker()).toBe(true);
+      expect(response?.headers()['content-type']).toContain('text/html');
+      await expect(page.locator('base')).toHaveAttribute('href', '/localtell-data/');
+      if (path === './') await expect(page.getByRole('heading', { level: 1, name: 'LocalTell Web' })).toBeVisible();
+      else {
+        await page.getByTestId('easy-input').fill(SHORT);
+        await page.getByTestId('easy-submit').click();
+        await expect(page.getByTestId('latitude')).toHaveText('12.971598');
+      }
+    }
   });
-  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 60_000 }).toBeTruthy();
-  // The app shell is usable offline only after the worker has cached index.html.
-  await expect
-    .poll(
-      () =>
-        page.evaluate(async () => {
-          for (const key of await caches.keys()) {
-            if (await (await caches.open(key)).match(new URL('index.html', document.baseURI).href)) return true;
-          }
-          return false;
-        }),
-      { timeout: 60_000 },
-    )
-    .toBe(true);
-  await context.setOffline(true);
-  await page.goto('easy');
-  await page.getByTestId('easy-input').fill(SHORT);
-  await page.getByTestId('easy-submit').click();
-  await expect(page.getByTestId('latitude')).toHaveText('12.971598');
-  await context.setOffline(false);
+});
+
+test('offline readiness waits for prefetched JavaScript after index.html is cached', async ({ page, context }, info) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await context.route(/\/main-[^/]+\.js$/, async (route) => {
+    if (route.request().serviceWorker()) await gate;
+    await route.continue();
+  });
+  try {
+    await withOfflineDiagnostics(page, context, info, async (record) => {
+      await page.goto('./');
+      const manifest = await shellManifest(page);
+      await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+      await expect.poll(async () => {
+        const state = await shellState(page, manifest);
+        return !state.missing.includes(manifest.index) && state.missing.some((url) => /\/main-[^/]+\.js$/.test(url));
+      }).toBe(true);
+      let ready = false;
+      const readiness = waitForOfflineShell(page, manifest).then(() => { ready = true; });
+      expect(ready).toBe(false);
+      release();
+      await readiness;
+      await context.setOffline(true);
+      const response = await page.goto('easy');
+      record(response);
+      expect(response?.fromServiceWorker()).toBe(true);
+      await page.getByTestId('easy-input').fill(SHORT);
+      await page.getByTestId('easy-submit').click();
+      await expect(page.getByTestId('latitude')).toHaveText('12.971598');
+    });
+  } finally {
+    release();
+  }
 });
 
 for (const path of ['./', 'easy', 'saved', 'offline-data', 'backup', 'settings', 'compare', 'map']) {

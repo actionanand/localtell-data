@@ -157,6 +157,40 @@ describe('DropboxBackupService regressions', () => {
       expect(service.status()).toBe('in-sync');
       expect(await service.sync()).toEqual({ kind: 'up-to-date' });
     });
+
+    /** Uploads place 1 so Dropbox and the baseline match, then edits once while the next download runs. */
+    async function editDuringNextDownload(): Promise<void> {
+      await setup();
+      await seedLocal(place(1));
+      expect(await service.sync()).toMatchObject({ kind: 'uploaded', localPending: false });
+      expect(await service.check()).toBe('in-sync');
+      dropbox.beforeDownload = async () => {
+        dropbox.beforeDownload = null;
+        await savedPlaces.save(place(9));
+      };
+    }
+
+    it('Check Dropbox reports local changes when a place is saved during the remote download', async () => {
+      await editDuringNextDownload();
+      expect(await service.check()).toBe('local-changes');
+      expect(service.status()).toBe('local-changes');
+      expect(dropbox.files.size).toBe(1);
+    });
+
+    it('Sync Now does not claim up to date when a place is saved during the remote comparison', async () => {
+      await editDuringNextDownload();
+      const uploadsBefore = dropbox.calls.filter((call) => call === 'filesUpload').length;
+      const outcome = await service.sync();
+      expect(outcome).toEqual({ kind: 'local-changed-during-sync' });
+      expect(service.status()).toBe('local-changes');
+      expect(dropbox.calls.filter((call) => call === 'filesUpload').length).toBe(uploadsBefore);
+      expect(dropbox.files.size).toBe(1);
+
+      // The next run backs the change up as a new file; the earlier backup is kept.
+      expect(await service.sync()).toMatchObject({ kind: 'uploaded', localPending: false });
+      expect(service.status()).toBe('in-sync');
+      expect(dropbox.files.size).toBe(2);
+    });
   });
 
   describe('over-limit Saved Places (Android SavedPlacesOverflow)', () => {

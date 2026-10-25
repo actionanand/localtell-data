@@ -25,6 +25,8 @@ export class FakeDropbox {
   folderExists = false;
   /** Runs after Dropbox accepts an upload, before the response returns (simulates concurrent activity). */
   afterUpload: (() => Promise<void> | void) | null = null;
+  /** Runs while a download is in flight (simulates edits during a remote comparison). */
+  beforeDownload: (() => Promise<void> | void) | null = null;
 
   async addFile(name: string, contents: Uint8Array | string, modifiedAt = Date.now()): Promise<StoredFile> {
     const bytes = typeof contents === 'string' ? new TextEncoder().encode(contents) : contents;
@@ -104,6 +106,7 @@ export class FakeDropbox {
     const url = String(input);
     if (url !== 'https://content.dropboxapi.com/2/files/download') throw new Error(`Unexpected fetch ${url}`);
     this.calls.push('download');
+    await this.beforeDownload?.();
     const arg = JSON.parse(new Headers(init?.headers).get('Dropbox-API-Arg') ?? '{}') as { path?: string };
     const file = [...this.files.values()].find((entry) => `rev:${entry.rev}` === arg.path);
     if (!file) return new Response('{"error_summary":"path/not_found/"}', { status: 409 });

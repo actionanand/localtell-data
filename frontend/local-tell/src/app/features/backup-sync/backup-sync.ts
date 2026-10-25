@@ -133,6 +133,12 @@ export class BackupSync {
         case 'up-to-date':
           this.notifications.show('Already up to date. Nothing was uploaded.', 'success');
           break;
+        case 'local-changed-during-sync':
+          this.notifications.show(
+            'Dropbox matched this browser when the check started, but your data changed meanwhile. Run Sync Now again to back up the change.',
+            'warning',
+          );
+          break;
         case 'uploaded':
           this.notifications.show(
             outcome.localPending

@@ -57,6 +57,7 @@ export interface RemoteOffer {
 
 export type SyncOutcome =
   | { readonly kind: 'up-to-date' }
+  | { readonly kind: 'local-changed-during-sync' }
   | { readonly kind: 'uploaded'; readonly file: DropboxRemoteFile; readonly localPending: boolean }
   | { readonly kind: 'nothing-to-back-up' }
   | { readonly kind: 'offer'; readonly offer: RemoteOffer }
@@ -179,15 +180,21 @@ export class DropboxBackupService {
         this.statusState.set('saved-limit-exceeded');
         return 'saved-limit-exceeded';
       }
-      const localFingerprint = await backupFingerprint(local);
       const remote = await selectRemoteBaseline(files, null, ownership, (file) => this.download(session, file), isInvalidRemoteBackup);
       const remoteFingerprint = remote.data ? await backupFingerprint(remote.data) : null;
+      // Saved Places may change while the remote backup downloads; classify against current data.
+      const current = await this.appData.snapshot();
+      if (SavedPlacesOverflow.excess(current.savedPlaces.length, this.savedLimit) > 0) {
+        this.statusState.set('saved-limit-exceeded');
+        return 'saved-limit-exceeded';
+      }
+      const currentFingerprint = await backupFingerprint(current);
       const baseline = this.metaState().baseline;
       let summary: SyncStatusSummary;
       if (remoteFingerprint === null || (remote.data && isBackupEmpty(remote.data))) summary = 'remote-empty';
-      else if (remoteFingerprint === localFingerprint) summary = 'in-sync';
+      else if (remoteFingerprint === currentFingerprint) summary = 'in-sync';
       else if (baseline === remoteFingerprint) summary = 'local-changes';
-      else if (baseline === localFingerprint) summary = 'remote-changes';
+      else if (baseline === currentFingerprint) summary = 'remote-changes';
       else summary = 'both-changed';
       this.statusState.set(summary);
       await this.updateMeta(session.account, { lastCheckAt: Date.now() });
@@ -306,6 +313,8 @@ export class DropboxBackupService {
       case 'UP_TO_DATE':
         await this.updateMeta(session.account, { baseline: localFingerprint, lastCheckAt: Date.now() });
         await this.publishLocalState(localFingerprint);
+        // Dropbox matched the data read at the start; an edit made during the comparison is not backed up.
+        if (this.statusState() !== 'in-sync') return { kind: 'local-changed-during-sync' };
         return { kind: 'up-to-date' };
       case 'UPLOAD_LOCAL': {
         if (isBackupEmpty(local) && remote.file === null) return { kind: 'nothing-to-back-up' };
@@ -582,6 +591,8 @@ function describeOutcome(outcome: SyncOutcome): string {
   switch (outcome.kind) {
     case 'up-to-date':
       return 'Already up to date';
+    case 'local-changed-during-sync':
+      return 'Local data changed during the check; not backed up yet';
     case 'uploaded':
       return 'Backup uploaded and verified';
     case 'nothing-to-back-up':

@@ -12,10 +12,11 @@ import { selectedLocation } from '../../core/models/location';
 import { formatFixed } from '../../core/maps-links/map-link-builder';
 import { NotificationService } from '../../core/ui/notification.service';
 import { Icon } from '../../shared/components/icon';
+import { AnnouncementCard } from '../../shared/components/announcement-card';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Icon, DatePipe, DecimalPipe],
+  imports: [RouterLink, Icon, DatePipe, DecimalPipe, AnnouncementCard],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {

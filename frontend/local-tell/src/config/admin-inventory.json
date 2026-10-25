@@ -1,0 +1,331 @@
+[
+  {
+    "countryCode": "IN",
+    "countryName": "India",
+    "layout": "REGIONS",
+    "admins": [
+      {
+        "id": "TN",
+        "adminCode": "IN-TN",
+        "name": "Tamil Nadu",
+        "region": "south",
+        "displayOrder": 1
+      },
+      {
+        "id": "KL",
+        "adminCode": "IN-KL",
+        "name": "Kerala",
+        "region": "south",
+        "displayOrder": 2
+      },
+      {
+        "id": "KA",
+        "adminCode": "IN-KA",
+        "name": "Karnataka",
+        "region": "south",
+        "displayOrder": 3
+      },
+      {
+        "id": "AP",
+        "adminCode": "IN-AP",
+        "name": "Andhra Pradesh",
+        "region": "south",
+        "displayOrder": 4
+      },
+      {
+        "id": "TS",
+        "adminCode": "IN-TS",
+        "name": "Telangana",
+        "region": "south",
+        "displayOrder": 5
+      },
+      {
+        "id": "PY",
+        "adminCode": "IN-PY",
+        "name": "Puducherry",
+        "region": "south",
+        "displayOrder": 6
+      },
+      {
+        "id": "AN",
+        "adminCode": "IN-AN",
+        "name": "Andaman and Nicobar Islands",
+        "region": "south",
+        "displayOrder": 7
+      },
+      {
+        "id": "LD",
+        "adminCode": "IN-LD",
+        "name": "Lakshadweep",
+        "region": "south",
+        "displayOrder": 8
+      },
+      {
+        "id": "MH",
+        "adminCode": "IN-MH",
+        "name": "Maharashtra",
+        "region": "west",
+        "displayOrder": 1
+      },
+      {
+        "id": "GJ",
+        "adminCode": "IN-GJ",
+        "name": "Gujarat",
+        "region": "west",
+        "displayOrder": 2
+      },
+      {
+        "id": "GA",
+        "adminCode": "IN-GA",
+        "name": "Goa",
+        "region": "west",
+        "displayOrder": 3
+      },
+      {
+        "id": "DH",
+        "adminCode": "IN-DH",
+        "name": "Dadra and Nagar Haveli and Daman and Diu",
+        "region": "west",
+        "displayOrder": 4
+      },
+      {
+        "id": "MP",
+        "adminCode": "IN-MP",
+        "name": "Madhya Pradesh",
+        "region": "central",
+        "displayOrder": 1
+      },
+      {
+        "id": "CG",
+        "adminCode": "IN-CG",
+        "name": "Chhattisgarh",
+        "region": "central",
+        "displayOrder": 2
+      },
+      {
+        "id": "UP",
+        "adminCode": "IN-UP",
+        "name": "Uttar Pradesh",
+        "region": "central",
+        "displayOrder": 3
+      },
+      {
+        "id": "UK",
+        "adminCode": "IN-UK",
+        "name": "Uttarakhand",
+        "region": "central",
+        "displayOrder": 4
+      },
+      {
+        "id": "RJ",
+        "adminCode": "IN-RJ",
+        "name": "Rajasthan",
+        "region": "north",
+        "displayOrder": 1
+      },
+      {
+        "id": "PB",
+        "adminCode": "IN-PB",
+        "name": "Punjab",
+        "region": "north",
+        "displayOrder": 2
+      },
+      {
+        "id": "HR",
+        "adminCode": "IN-HR",
+        "name": "Haryana",
+        "region": "north",
+        "displayOrder": 3
+      },
+      {
+        "id": "HP",
+        "adminCode": "IN-HP",
+        "name": "Himachal Pradesh",
+        "region": "north",
+        "displayOrder": 4
+      },
+      {
+        "id": "CH",
+        "adminCode": "IN-CH",
+        "name": "Chandigarh",
+        "region": "north",
+        "displayOrder": 5
+      },
+      {
+        "id": "DL",
+        "adminCode": "IN-DL",
+        "name": "Delhi",
+        "region": "north",
+        "displayOrder": 6
+      },
+      {
+        "id": "JK",
+        "adminCode": "IN-JK",
+        "name": "Jammu and Kashmir",
+        "region": "north",
+        "displayOrder": 7
+      },
+      {
+        "id": "LA",
+        "adminCode": "IN-LA",
+        "name": "Ladakh",
+        "region": "north",
+        "displayOrder": 8
+      },
+      {
+        "id": "BR",
+        "adminCode": "IN-BR",
+        "name": "Bihar",
+        "region": "east",
+        "displayOrder": 1
+      },
+      {
+        "id": "JH",
+        "adminCode": "IN-JH",
+        "name": "Jharkhand",
+        "region": "east",
+        "displayOrder": 2
+      },
+      {
+        "id": "OD",
+        "adminCode": "IN-OD",
+        "name": "Odisha",
+        "region": "east",
+        "displayOrder": 3
+      },
+      {
+        "id": "WB",
+        "adminCode": "IN-WB",
+        "name": "West Bengal",
+        "region": "east",
+        "displayOrder": 4
+      },
+      {
+        "id": "AS",
+        "adminCode": "IN-AS",
+        "name": "Assam",
+        "region": "northeast",
+        "displayOrder": 1
+      },
+      {
+        "id": "AR",
+        "adminCode": "IN-AR",
+        "name": "Arunachal Pradesh",
+        "region": "northeast",
+        "displayOrder": 2
+      },
+      {
+        "id": "MN",
+        "adminCode": "IN-MN",
+        "name": "Manipur",
+        "region": "northeast",
+        "displayOrder": 3
+      },
+      {
+        "id": "ML",
+        "adminCode": "IN-ML",
+        "name": "Meghalaya",
+        "region": "northeast",
+        "displayOrder": 4
+      },
+      {
+        "id": "MZ",
+        "adminCode": "IN-MZ",
+        "name": "Mizoram",
+        "region": "northeast",
+        "displayOrder": 5
+      },
+      {
+        "id": "NL",
+        "adminCode": "IN-NL",
+        "name": "Nagaland",
+        "region": "northeast",
+        "displayOrder": 6
+      },
+      {
+        "id": "SK",
+        "adminCode": "IN-SK",
+        "name": "Sikkim",
+        "region": "northeast",
+        "displayOrder": 7
+      },
+      {
+        "id": "TR",
+        "adminCode": "IN-TR",
+        "name": "Tripura",
+        "region": "northeast",
+        "displayOrder": 8
+      }
+    ]
+  },
+  {
+    "countryCode": "LK",
+    "countryName": "Sri Lanka",
+    "layout": "FLAT",
+    "admins": [
+      {
+        "id": "LK-1",
+        "adminCode": "LK-1",
+        "name": "Western Province",
+        "region": null,
+        "displayOrder": 1
+      },
+      {
+        "id": "LK-2",
+        "adminCode": "LK-2",
+        "name": "Central Province",
+        "region": null,
+        "displayOrder": 2
+      },
+      {
+        "id": "LK-3",
+        "adminCode": "LK-3",
+        "name": "Southern Province",
+        "region": null,
+        "displayOrder": 3
+      },
+      {
+        "id": "LK-4",
+        "adminCode": "LK-4",
+        "name": "Northern Province",
+        "region": null,
+        "displayOrder": 4
+      },
+      {
+        "id": "LK-5",
+        "adminCode": "LK-5",
+        "name": "Eastern Province",
+        "region": null,
+        "displayOrder": 5
+      },
+      {
+        "id": "LK-6",
+        "adminCode": "LK-6",
+        "name": "North Western Province",
+        "region": null,
+        "displayOrder": 6
+      },
+      {
+        "id": "LK-7",
+        "adminCode": "LK-7",
+        "name": "North Central Province",
+        "region": null,
+        "displayOrder": 7
+      },
+      {
+        "id": "LK-8",
+        "adminCode": "LK-8",
+        "name": "Uva Province",
+        "region": null,
+        "displayOrder": 8
+      },
+      {
+        "id": "LK-9",
+        "adminCode": "LK-9",
+        "name": "Sabaragamuwa Province",
+        "region": null,
+        "displayOrder": 9
+      }
+    ]
+  }
+]

@@ -81,6 +81,7 @@ test('serves deep links through the Pages 404 fallback', async ({ page }) => {
 
 test('keeps decoding while the browser is offline', async ({ page, context }) => {
   await page.goto('easy');
+  await expect(page.getByTestId('easy-input')).toBeVisible();
   await context.setOffline(true);
   await page.getByTestId('easy-input').fill('-33.86882, 151.209296');
   await page.getByTestId('easy-submit').click();
@@ -164,6 +165,7 @@ test('downloads, verifies and uses an offline pack from the same-origin mirror',
   test.skip(!process.env['E2E_PACKS'], 'Set E2E_PACKS=1 after `npm run mirror:data -- --countries=LK`.');
   test.slow();
   await page.goto('offline-data');
+  await page.getByTestId('admin-LK-1').locator('summary').click();
   const pack = page.getByTestId('pack-LK-1');
   await expect(pack).toBeVisible({ timeout: 60_000 });
   await pack.getByRole('button', { name: 'Download Western Province' }).click();

@@ -1,5 +1,6 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import type { Dropbox, DropboxAuth } from 'dropbox';
+import { DROPBOX_SDK_LOADER } from './dropbox-sdk';
 import { APP_CONFIG, isDropboxAppKey } from '../config/app-config';
 import { accountHash, hasRequiredScopes, REQUIRED_SCOPES } from './dropbox-policy';
 
@@ -100,6 +101,7 @@ export function isCredentialRejected(error: unknown): boolean {
  */
 @Service()
 export class DropboxAuthService {
+  private readonly loadSdk = inject(DROPBOX_SDK_LOADER);
   private readonly config = inject(APP_CONFIG);
   private readonly state = signal<DropboxConnectionState>({
     status: 'disconnected',
@@ -143,17 +145,24 @@ export class DropboxAuthService {
 
   async connect(persistent: boolean): Promise<void> {
     if (!this.configured()) throw new Error('Dropbox is not configured for this deployment.');
-    this.generation++;
+    const operation = ++this.generation;
     this.session = null;
     this.publish({ status: 'connecting' });
-    const { DropboxAuth } = await import('dropbox');
-    const auth = new DropboxAuth({ clientId: this.config.dropbox.appKey });
-    const state = randomState();
-    const redirectUri = this.redirectUri();
-    const url = await auth.getAuthenticationUrl(redirectUri, state, 'code', 'offline', [...REQUIRED_SCOPES], 'none', true);
-    const pending: PendingAuthorization = { state, codeVerifier: auth.getCodeVerifier(), createdAt: Date.now(), persistent, redirectUri };
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-    window.location.assign(String(url));
+    try {
+      const { DropboxAuth } = await this.loadSdk();
+      const auth = new DropboxAuth({ clientId: this.config.dropbox.appKey });
+      const state = randomState();
+      const redirectUri = this.redirectUri();
+      const url = await auth.getAuthenticationUrl(redirectUri, state, 'code', 'offline', [...REQUIRED_SCOPES], 'none', true);
+      if (operation !== this.generation) return;
+      const pending: PendingAuthorization = { state, codeVerifier: auth.getCodeVerifier(), createdAt: Date.now(), persistent, redirectUri };
+      sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+      window.location.assign(String(url));
+    } catch (cause) {
+      const message = 'Dropbox sign-in could not start. Reload the page or reconnect and try again.';
+      if (operation === this.generation) this.publish({ status: 'failed', message });
+      throw new Error(message, { cause });
+    }
   }
 
   /** Handles the OAuth redirect. Always consumes the pending authorization, success or not. */
@@ -191,7 +200,7 @@ export class DropboxAuthService {
     this.publish({ status: 'connecting' });
     try {
       if (pending.redirectUri !== this.redirectUri()) throw new Error('Dropbox redirect URI changed during authorization.');
-      const { DropboxAuth } = await import('dropbox');
+      const { DropboxAuth } = await this.loadSdk();
       const auth = new DropboxAuth({ clientId: this.config.dropbox.appKey });
       auth.setCodeVerifier(pending.codeVerifier);
       const response = await auth.getAccessTokenFromCode(pending.redirectUri, code);
@@ -275,7 +284,7 @@ export class DropboxAuthService {
   private async verify(operation: number, credential: StoredCredential, persistent: boolean): Promise<void> {
     this.publish({ status: 'connecting', persistent });
     try {
-      const { Dropbox, DropboxAuth } = await import('dropbox');
+      const { Dropbox, DropboxAuth } = await this.loadSdk();
       const auth = new DropboxAuth({
         clientId: this.config.dropbox.appKey,
         accessToken: credential.accessToken,

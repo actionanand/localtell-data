@@ -14,9 +14,9 @@ on:
         type: boolean
         default: false
 
-# The publishing step authenticates using a repository SSH deploy key.
+# The publishing step uses GitHub's built-in GITHUB_TOKEN.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: localtell-web-${{ github.ref }}
@@ -96,9 +96,9 @@ jobs:
            (github.event_name == 'workflow_dispatch' && inputs.deploy))
         uses: peaceiris/actions-gh-pages@v4
         with:
-          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          # 'uses' actions resolve this path from repository root, not defaults.run.working-directory.
+          # 'uses' actions resolve this path from repository root.
           publish_dir: ./frontend/local-tell/dist/local-tell/browser
           enable_jekyll: false
           keep_files: false

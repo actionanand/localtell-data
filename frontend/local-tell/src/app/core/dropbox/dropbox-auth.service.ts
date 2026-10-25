@@ -1,6 +1,6 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import type { Dropbox, DropboxAuth } from 'dropbox';
-import { APP_CONFIG } from '../config/app-config';
+import { APP_CONFIG, isDropboxAppKey } from '../config/app-config';
 import { accountHash, hasRequiredScopes, REQUIRED_SCOPES } from './dropbox-policy';
 
 export type DropboxConnectionStatus =
@@ -112,11 +112,16 @@ export class DropboxAuthService {
   private session: DropboxSession | null = null;
 
   readonly connection = this.state.asReadonly();
-  readonly configured = computed(() => this.config.features.cloudBackup && this.config.dropbox.appKey.length > 0);
+  readonly configured = computed(() => this.config.features.cloudBackup && isDropboxAppKey(this.config.dropbox.appKey));
   readonly connected = computed(() => this.state().status === 'connected');
 
   redirectUri(): string {
-    return this.config.dropbox.redirectUri || new URL('dropbox/callback', document.baseURI).toString();
+    const url = new URL(this.config.dropbox.redirectUri || 'dropbox/callback', document.baseURI);
+    const localHttp = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if ((url.protocol !== 'https:' && !localHttp) || url.origin !== window.location.origin || url.username || url.password || url.search || url.hash) {
+      throw new Error('Dropbox redirect URI must be a same-origin HTTPS URL (HTTP is allowed on localhost).');
+    }
+    return url.toString();
   }
 
   currentGeneration(): number {
@@ -153,6 +158,11 @@ export class DropboxAuthService {
 
   /** Handles the OAuth redirect. Always consumes the pending authorization, success or not. */
   async completeAuthorization(params: URLSearchParams): Promise<void> {
+    if (!this.configured()) {
+      sessionStorage.removeItem(PENDING_KEY);
+      this.publish({ status: 'unconfigured' });
+      return;
+    }
     const pending = readJson<PendingAuthorization>(sessionStorage, PENDING_KEY);
     sessionStorage.removeItem(PENDING_KEY);
     const operation = ++this.generation;
@@ -161,7 +171,7 @@ export class DropboxAuthService {
       this.publish({ status: 'failed', message: 'No Dropbox sign-in was in progress in this tab. Start again from Dropbox Backup.' });
       return;
     }
-    if (params.get('state') !== pending.state || Date.now() - pending.createdAt > PENDING_MAX_AGE_MS) {
+    if (params.get('state') !== pending.state || !Number.isFinite(pending.createdAt) || pending.createdAt > Date.now() || Date.now() - pending.createdAt > PENDING_MAX_AGE_MS) {
       this.publish({ status: 'failed', message: 'The Dropbox sign-in response could not be verified (state mismatch or expired). Nothing was connected.' });
       return;
     }
@@ -180,6 +190,7 @@ export class DropboxAuthService {
     }
     this.publish({ status: 'connecting' });
     try {
+      if (pending.redirectUri !== this.redirectUri()) throw new Error('Dropbox redirect URI changed during authorization.');
       const { DropboxAuth } = await import('dropbox');
       const auth = new DropboxAuth({ clientId: this.config.dropbox.appKey });
       auth.setCodeVerifier(pending.codeVerifier);

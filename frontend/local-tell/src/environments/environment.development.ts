@@ -5,5 +5,6 @@ import { environment as production } from './environment';
 export const environment: AppConfig = {
   ...production,
   production: false,
+  dropbox: { ...production.dropbox, appKey: '' },
   features: { ...production.features, serviceWorker: false },
 };

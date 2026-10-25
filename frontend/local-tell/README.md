@@ -79,7 +79,12 @@ Add a country by appending to `src/config/manifest-sources.json` (`layout` `FLAT
 
 `environment.tiles` defaults to the public OpenStreetMap tile server with attribution. That server
 is not for heavy production traffic ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/));
-configure your own provider for real deployments. Tiles are never prefetched.
+configure your own provider for heavy production traffic. Attribution remains on the map, including
+mobile and expanded views. The browser sends an origin Referer under
+`strict-origin-when-cross-origin` and handles Cache-Control, Expires and ETag normally. No forced
+no-cache headers, tile prefetch, bulk download or offline tile cache is added. The service worker
+caches only application assets; downloaded locality SQLite packs are separate from map tiles.
+Browser compliance tests use intercepted requests and a local cache fixture, not public OSM traffic.
 
 ## IP location
 
@@ -93,13 +98,32 @@ comparison screen does not claim to detect a VPN.
    (App Folder access), add the redirect URI, e.g.
    `https://actionanand.github.io/localtell-data/dropbox/callback` and `http://localhost:3041/dropbox/callback`.
 2. Keep scopes `account_info.read`, `files.metadata.read`, `files.content.read`, `files.content.write`.
-3. Put the public **App key** in `environment.dropbox.appKey`. Never add the app secret. Set
-   `redirectUri` only if it differs from `<origin><base href>dropbox/callback`.
+3. Set the GitHub Actions repository secret **`DROPBOX_APP_KEY`** to the public App key of that
+  same Android App Folder registration, not a generated user token. Never add the App secret.
+  Keep `environment.dropbox.appKey` as `DROPBOX_APP_KEY_PLACEHOLDER` in source.
+4. CI runs `node scripts/inject-dropbox-key.mjs` before the production build, following
+  [ping-metric's build-time injection approach](https://github.com/actionanand/ping-metric/blob/794a0da334ca40ce052b5e1ed2bde50d7c0c33ec/scripts/inject-env.js).
+  It validates the key without logging it and replaces only the exact placeholder. A real
+  `main-github` deployment fails if the key is missing. PR/manual validation without a secret
+  builds with Dropbox disabled. `node scripts/inject-dropbox-key.mjs --verify` checks the built
+  JavaScript for the configured public key and rejects unresolved placeholders before publishing.
+5. Set `redirectUri` only if it differs from `<origin><base href>dropbox/callback`. It must be
+  same-origin HTTPS (HTTP is allowed on localhost) and exactly registered with Dropbox.
+
+Local development explicitly disables Dropbox; a production build left with the placeholder also
+disables it at runtime. For a local production configuration check, provide the key via the process
+environment and run injection, build, then verification. The injected source is a build artifact;
+restore the placeholder before committing. The deployed App key is intentionally public JavaScript.
 
 Backups go in `/localtell-managed-backups`, shown as *Apps / LocalTell / localtell-managed-backups*.
 Dropbox owns the App Folder root, so it cannot be moved under *Apps / AR Apps*. Tokens are kept in
-`sessionStorage` by default. "Remember on this browser" uses `localStorage`, where any script on
-the origin can read them.
+`sessionStorage` by default. "Remember on this browser" uses `localStorage`. Both are readable by
+scripts on the origin and are not an encrypted token vault; persistent sign-in increases exposure.
+OAuth uses the official SDK, authorization codes, PKCE and state verification; no App secret is used.
+The existing refresh-token handling is preserved. This differs from Dropbox's
+[pure-browser recommendation](https://docs.dropboxapi.com/dropbox-api/docs/oauth) of short-lived
+tokens with PKCE and no refresh token. Use session-only sign-in on trusted browsers; a future
+short-lived-only mode would reduce that risk. No browser scheduling guarantee is made.
 
 The web app never deletes, renames or overwrites Dropbox files. Uploads use add mode with
 `strict_conflict`, then download the exact revision to verify it. Retention cleanup is not

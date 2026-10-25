@@ -41,10 +41,22 @@ jobs:
 
       - run: npm run test:ci
 
+      - name: Inject public Dropbox App key
+        run: node scripts/inject-dropbox-key.mjs
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
+
       - name: Build for GitHub Pages
         run: npm run build:gh
         env:
           BASE_HREF: /localtell-data/
+
+      - name: Verify Dropbox production configuration
+        run: node scripts/inject-dropbox-key.mjs --verify
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
 
       - name: Mirror verified geographic packs (same-origin downloads)
         run: npm run mirror:data

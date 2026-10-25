@@ -3,7 +3,7 @@ import manifestSources from '../config/manifest-sources.json';
 
 /**
  * Production (GitHub Pages) configuration. Everything here is public: never add secrets.
- * The Dropbox app key is a public OAuth client identifier and is empty until configured.
+ * The Dropbox app key is a public OAuth client identifier injected before deployment.
  */
 export const environment: AppConfig = {
   production: true,
@@ -17,7 +17,7 @@ export const environment: AppConfig = {
     maxZoom: 19,
   },
   ipGeolocation: { provider: 'ipapi-co', providerName: 'ipapi.co', privacyUrl: 'https://ipapi.co/privacy/' },
-  dropbox: { appKey: '', redirectUri: '' },
+  dropbox: { appKey: 'DROPBOX_APP_KEY_PLACEHOLDER', redirectUri: '' },
   limits: { maxSavedPlaces: 30, maxJourneyPoints: 100 },
   features: { cloudBackup: true, serviceWorker: true },
 };

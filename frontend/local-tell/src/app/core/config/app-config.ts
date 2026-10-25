@@ -45,6 +45,10 @@ export interface AppConfig {
 
 export const APP_CONFIG = new InjectionToken<AppConfig>('APP_CONFIG');
 
+export function isDropboxAppKey(value: string): boolean {
+  return /^[a-z0-9]{8,32}$/i.test(value);
+}
+
 export function manifestSources(config: AppConfig): CountryManifestSource[] {
   return config.manifestSources.map((source, sourceOrder) => ({ ...source, sourceOrder }));
 }
@@ -59,7 +63,8 @@ export function validateAppConfig(config: AppConfig): AppConfig {
     if (source.layout === 'REGIONS' && source.countryCode !== 'IN') problems.push(`Regional layout is only defined for IN`);
   }
   if (!/^https:\/\//.test(config.tiles.urlTemplate)) problems.push('Tile URL template must use HTTPS');
-  if (config.dropbox.appKey && !/^[a-z0-9]{8,32}$/i.test(config.dropbox.appKey)) problems.push('Dropbox app key looks invalid');
+  const unconfigured = config.dropbox.appKey.endsWith('_PLACEHOLDER');
+  if (config.dropbox.appKey && !unconfigured && !isDropboxAppKey(config.dropbox.appKey)) problems.push('Dropbox app key looks invalid');
   if (problems.length > 0) throw new Error(`Invalid LocalTell configuration: ${problems.join('; ')}`);
-  return config;
+  return unconfigured ? { ...config, dropbox: { ...config.dropbox, appKey: '' } } : config;
 }

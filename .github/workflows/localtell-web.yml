@@ -1,17 +1,20 @@
 name: LocalTell Web
 
 on:
-  pull_request:
-    branches: [main-github]
   push:
-    branches: [main-github]
+    branches:
+      - main-github
+  pull_request:
+    branches:
+      - main-github
   workflow_dispatch:
     inputs:
       deploy:
-        description: 'Deploy to GitHub Pages (only honoured on main-github)'
+        description: 'Publish to gh-pages (only on main-github)'
         type: boolean
         default: false
 
+# The publishing step authenticates using a repository SSH deploy key.
 permissions:
   contents: read
 
@@ -24,22 +27,27 @@ defaults:
     working-directory: frontend/local-tell
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version-file: frontend/local-tell/.nvmrc
           cache: npm
           cache-dependency-path: frontend/local-tell/package-lock.json
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - run: npm run lint
+      - name: Lint
+        run: npm run lint
 
-      - run: npm run test:ci
+      - name: Unit and script tests
+        run: npm run test:ci
 
       - name: Inject public Dropbox App key
         run: node scripts/inject-dropbox-key.mjs
@@ -47,7 +55,7 @@ jobs:
           DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
           DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
 
-      - name: Build for GitHub Pages
+      - name: Build Angular application for GitHub Pages
         run: npm run build:gh
         env:
           BASE_HREF: /localtell-data/
@@ -58,7 +66,7 @@ jobs:
           DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
           DROPBOX_KEY_REQUIRED: ${{ github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
 
-      - name: Mirror verified geographic packs (same-origin downloads)
+      - name: Mirror verified geographic packs
         run: npm run mirror:data
 
       - name: Browser integration tests
@@ -68,20 +76,29 @@ jobs:
         env:
           E2E_PACKS: '1'
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: frontend/local-tell/dist/local-tell/browser
+      - name: Verify complete publish directory
+        run: |
+          set -eu
+          out=dist/local-tell/browser
+          test -s "$out/index.html"
+          test -s "$out/404.html"
+          test -s "$out/ngsw.json"
+          test -s "$out/ngsw-worker.js"
+          test -s "$out/assets/sqljs/sql-wasm-browser.wasm"
+          test -s "$out/data-mirror/cell-data-v3/manifest.json"
+          test -s "$out/data-mirror/country-lk-v1/manifest-LK.json"
+          test -s "$out/icons/icon-192.png"
 
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish Angular build to gh-pages
+        if: >-
+          github.ref == 'refs/heads/main-github' &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'workflow_dispatch' && inputs.deploy))
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          publish_branch: gh-pages
+          # 'uses' actions resolve this path from repository root, not defaults.run.working-directory.
+          publish_dir: ./frontend/local-tell/dist/local-tell/browser
+          enable_jekyll: false
+          keep_files: false

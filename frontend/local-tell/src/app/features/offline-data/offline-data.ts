@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { form, FormField } from '@angular/forms/signals';
 import { PackCatalogService } from '../../core/geographic-packs/pack-catalog.service';
@@ -7,7 +7,7 @@ import { ConnectivityService } from '../../core/ui/connectivity.service';
 import { NotificationService } from '../../core/ui/notification.service';
 import { ConfirmDialog } from '../../shared/components/confirm-dialog';
 import { Icon } from '../../shared/components/icon';
-import { PackList } from './pack-list';
+import { AdminCatalog } from './admin-catalog';
 
 interface ConfirmDownload {
   readonly title: string;
@@ -16,7 +16,7 @@ interface ConfirmDownload {
 
 @Component({
   selector: 'app-offline-data',
-  imports: [FormField, ConfirmDialog, Icon, DatePipe, PackList],
+  imports: [FormField, ConfirmDialog, Icon, DatePipe, AdminCatalog],
   templateUrl: './offline-data.html',
   styles: `
     .group-head {
@@ -30,6 +30,7 @@ interface ConfirmDownload {
   `,
 })
 export class OfflineData implements OnInit {
+  readonly query = input('');
   protected readonly packs = inject(PackCatalogService);
   private readonly notifications = inject(NotificationService);
   protected readonly online = inject(ConnectivityService).online;
@@ -48,7 +49,12 @@ export class OfflineData implements OnInit {
     const result = this.result();
     return result ? PackCatalog.filterCountries(PackCatalog.countries(result.packs), this.searchModel().query) : [];
   });
-  protected readonly allPacks = computed(() => this.result()?.packs ?? []);
+  protected readonly allPacks = computed(() => {
+    const state = this.packs.catalog();
+    if (state.status !== 'loaded') return [];
+    return state.result.packs.filter((pack) => !state.result.failedSources.some((failed) => failed.source.countryCode === pack.countryCode)
+      && !state.cachedSources.some((cached) => cached.startsWith(pack.countryName + ' (')));
+  });
   protected readonly required = computed(() => PackCatalog.requiredPacks(this.allPacks(), this.packs.installedById()));
   protected readonly orphans = computed(() => {
     const known = new Set(this.allPacks().map((pack) => pack.id));
@@ -64,6 +70,7 @@ export class OfflineData implements OnInit {
   });
 
   ngOnInit(): void {
+    if (this.query()) this.searchModel.set({ query: this.query() });
     void this.packs.refreshStorageEstimate();
     if (this.packs.catalog().status === 'idle') void this.packs.loadCatalog();
   }

@@ -58,10 +58,10 @@ const PHASE_LABELS = { download: 'Downloading', verify: 'Verifying SHA-256', dec
           <div class="row">
             @if (job && (job.status === 'running' || job.status === 'queued') && job.phase !== 'activate') {
               <button type="button" class="btn btn-small" (click)="catalog.cancel(pack.id)" [attr.aria-label]="'Cancel ' + pack.name">Cancel</button>
-            } @else if (job && (job.status === 'failed' || job.status === 'cancelled')) {
+            } @else if (job && (job.status === 'failed' || job.status === 'cancelled') && allowDownload()) {
               <button type="button" class="btn btn-small" (click)="catalog.enqueue([pack])" [attr.aria-label]="'Retry ' + pack.name">Retry</button>
               <button type="button" class="btn btn-small" (click)="catalog.dismissJob(pack.id)">Dismiss</button>
-            } @else if (state === 'missing' || state === 'update') {
+            } @else if ((state === 'missing' || state === 'update') && allowDownload()) {
               <button
                 type="button"
                 class="btn btn-small btn-primary"
@@ -99,6 +99,7 @@ export class PackList {
   protected readonly catalog = inject(PackCatalogService);
   protected readonly phases = PHASE_LABELS;
   readonly packs = input.required<readonly RemotePack[]>();
+  readonly allowDownload = input(true);
   readonly removeRequested = output<RemotePack>();
 
   protected bytes(value: number | null): string {

@@ -2,12 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { APP_CONFIG, validateAppConfig } from '../config/app-config';
 import { DropboxAuthService } from './dropbox-auth.service';
 import { TEST_CONFIG, testConfig } from '../../../testing/test-config';
+import { DROPBOX_SDK_LOADER } from './dropbox-sdk';
 
 describe('Dropbox public configuration', () => {
   afterEach(() => {
     sessionStorage.clear();
     localStorage.clear();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   function service(appKey: string, redirectUri = ''): DropboxAuthService {
@@ -35,6 +37,16 @@ describe('Dropbox public configuration', () => {
     expect(auth.configured()).toBe(true);
     expect(auth.connection().persistent).toBe(false);
     expect(localStorage.length).toBe(0);
+  });
+
+  it('leaves connecting and reports a safe recoverable message if SDK initialization fails', async () => {
+    TestBed.configureTestingModule({ providers: [{ provide: DROPBOX_SDK_LOADER, useValue: () => Promise.reject(new TypeError('n is not a constructor')) }] });
+    const auth = service('example123456');
+    await expect(auth.connect(false)).rejects.toThrow('Dropbox sign-in could not start');
+    expect(auth.connection().status).toBe('failed');
+    expect(auth.connection().message).not.toContain('constructor');
+    await auth.retry();
+    expect(auth.connection().status).toBe('disconnected');
   });
 
   it('rejects a callback with mismatched state before token exchange', async () => {

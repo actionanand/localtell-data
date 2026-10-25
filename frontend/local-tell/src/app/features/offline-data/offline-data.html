@@ -79,63 +79,11 @@
     }
   }
 
-  @if (result()) {
     <div class="field">
       <label for="pack-search">Search packs</label>
       <input id="pack-search" type="search" [formField]="searchForm.query" placeholder="Country, region, state or pack ID" />
     </div>
-  }
-
-  @for (country of countries(); track country.countryCode) {
-    <section [attr.aria-labelledby]="'country-' + country.countryCode">
-      <div class="group-head">
-        <h3 [id]="'country-' + country.countryCode">
-          {{ country.countryName }} <span class="muted small">({{ country.packs.length }} packs)</span>
-        </h3>
-        <div class="row">
-          <button
-            type="button"
-            class="btn btn-small"
-            (click)="askDownload('Download all packs for ' + country.countryName, country.packs)"
-            [disabled]="requiredIn(country.packs) === 0"
-          >
-            Download country ({{ requiredIn(country.packs) }})
-          </button>
-          @if (installedIn(country.packs).length > 0) {
-            <button
-              type="button"
-              class="btn btn-small btn-danger"
-              (click)="confirmDelete.set({ ids: installedIn(country.packs), label: 'installed ' + country.countryName + ' packs' })"
-            >
-              Remove installed
-            </button>
-          }
-        </div>
-      </div>
-      @if (country.layout === 'REGIONS') {
-        @for (region of regions(country); track region.region.manifestKey) {
-          <div class="group-head">
-            <h4>{{ region.region.displayName }}</h4>
-            <button
-              type="button"
-              class="btn btn-small"
-              (click)="askDownload('Download ' + region.region.displayName, region.packs)"
-              [disabled]="requiredIn(region.packs) === 0"
-            >
-              Download region ({{ requiredIn(region.packs) }})
-            </button>
-          </div>
-          <app-pack-list [packs]="region.packs" (removeRequested)="confirmDelete.set({ ids: [$event.id], label: $event.name })" />
-        }
-      } @else {
-        <app-pack-list [packs]="country.packs" (removeRequested)="confirmDelete.set({ ids: [$event.id], label: $event.name })" />
-      }
-    </section>
-  } @empty {
-    @if (result()) {
-      <p class="muted">No packs match your search.</p>
-    }
-  }
+  <app-admin-catalog [query]="searchModel().query" (downloadRequested)="askDownload($event.title, $event.packs)" (removeRequested)="confirmDelete.set({ ids: [$event.id], label: $event.name })" />
 
   @if (orphans().length > 0) {
     <h3>Installed packs no longer in the catalog</h3>

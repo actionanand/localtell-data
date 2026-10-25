@@ -7,6 +7,101 @@ codes.
 
 ## Architecture
 
+### Built-in geographic guidance
+
+`core/geography/` ports Android's LTG1 decoder and conservative boundary classifier. It is separate
+from locality SQLite databases and the location codec. The exact Android `boundaries.ltgz` asset
+(6,032,996 bytes, SHA-256 `e34ce12b0ad1d5a289704a30848fcb021f6a09ed70babf421e90136df1ebb4e0`)
+is bundled under `public/geography/` with its unchanged NOTICE and provenance. It includes 238
+country/territory codes and all 36 Indian state/UT identifiers. Inventory does not guarantee a
+confident match everywhere. A worker verifies SHA-256, decompresses with a size bound, and applies
+the original polygon holes, spatial grid, antimeridian, spherical edge-distance and dispute rules.
+
+Country/state classification remains available without locality packs. Latitude beyond 85 degrees,
+disputed/border uncertainty and GPS accuracy missing or greater than 25 km yield unknown guidance.
+Manual input and decoded codes classify the represented coordinate; this is not proof of a person's
+actual location or GPS accuracy. IP-derived locations are never used for precise state guidance.
+The ~6 MB asset is prefetched by the service worker in the background; it does not block first paint.
+Offline use requires that installation/cache preparation has completed and browser storage remains.
+
+Attribution is exposed with each location result and available offline in the bundled NOTICE:
+Natural Earth public-domain data, and India geoBoundaries gbOpen / DataMeet India community /
+Election Commission of India under **CC BY 2.5 IN**. No territorial or survey-grade claim is made.
+
+### Administrative download inventory
+
+`src/config/admin-inventory.json` is lightweight inventory derived from the data repository configs:
+India's six regions and 36 states/UTs, and Sri Lanka's nine provinces. Native expandable sections
+work without a manifest. IDs/admin codes, never translated names, connect inventory to validated
+manifests. The inventory does not imply publication. Unknown/unavailable catalogs, unpublished
+units, downloadable packs, installed versions and updates are distinct. Only a confirmed catalog
+enables targeted/bulk downloads; failed refreshes preserve installed databases and validated cache.
+New country layouts come from configured source metadata rather than India's regional model.
+
+### Shared announcements
+
+Web reads only the shared Android feed:
+`https://raw.githubusercontent.com/actionanand/localtell-data/master/announcements/home.json`.
+One root service owns Dashboard/Easy selection, session dismissal, revision-aware persistent
+dismissal and a results-loaded suppression latch. Clearing results or switching routes never resets
+that latch; a new document load is a new Web session. English/Tamil/Sanskrit use browser language
+with English fallback. Requests contain no coordinates, codes, saved data or identifiers and omit
+credentials and Referer. Responses are bounded to 64 KiB, validated before caching, and cached
+content still obeys publication/expiry, repeat and dismissal rules offline.
+
+Refresh occurs at launch, with a one-minute foreground/reconnect minimum and five-minute visible
+polling interval; eligibility is reevaluated every 30 seconds. Refresh stops after results appear.
+Browser HTTP caching handles ETag/Last-Modified revalidation. CDN propagation is not instant push.
+Safe actions are none, offline data, or an exact HTTPS Google Play listing with only a valid `id`.
+
+**Web interpretation of version bounds:** `minVersionCode` and `maxVersionCode` are validated as
+Android integers but intentionally not used for Web eligibility. They are not mapped to npm semver
+or a fabricated Android build number. The existing Sri Lanka notice is eligible when its other
+rules pass. Web-only targeting would require a separately agreed schema extension, not a new feed.
+
+### Theme and privacy
+
+Appearance defaults to System and can be set to Light or Dark in Settings. `localtell.theme.v1`
+stores only that choice. System changes update the palette and browser theme color immediately.
+Green tokens and the numeric/short-code palettes match Android. Existing user data, tokens and
+installed pack stores are not reset or migrated destructively.
+
+### Manual live-account Dropbox OAuth checklist
+
+Automated production tests use a synthetic public App key and intercept authorization/API requests.
+They exercise the actual SDK's constructors and PKCE, not a real Dropbox login.
+Set `E2E_DROPBOX=1` to enable these tests against a synthetic-key production build; combine with
+`E2E_PACKS=1` after mirroring pack data for the full suite. Do not deploy a synthetic-key build.
+The SDK loader normalizes named ES exports and the UMD default namespace emitted by the Angular
+production builder. Previously `new DropboxAuth(...)` used an undefined named export after code
+splitting, producing `n is not a constructor`; failed starts now enter a recoverable error state.
+
+The parity validation was run in the official Playwright Ubuntu 24.04/Chromium image: lint,
+152 Angular unit tests, 16 script tests (including real Android boundary vectors and palette contrast), strict browser-test
+TypeScript checks, optimized Pages build, real mirrored geographic packs, and all 36 Playwright
+tests. The suite includes light/dark WCAG A/AA checks, offline reloads, corrupt boundary assets,
+announcement persistence/suppression, real SDK PKCE initialization and synthetic session refresh.
+Live Dropbox consent, account-specific scopes and production redirect registration still require
+the checklist below. Automated success is not proof of a real account sign-in.
+
+1. Configure the existing Android-shared Dropbox App Folder App key through the existing injection
+  process and register the exact HTTPS callback for the deployed base path. Do not use an App secret.
+2. Open Backup in a fresh trusted-browser tab with persistent sign-in unchecked. Connect and verify
+  Dropbox requests only the four documented scopes and shows the existing LocalTell application.
+3. Cancel consent, return to Backup and reconnect. Confirm cancellation is recoverable and no
+  connecting spinner remains indefinitely.
+4. Approve consent. Verify the callback removes its authorization code from the address bar, shows
+  the correct account, and session credentials are not written to localStorage by default.
+5. Reload the tab, verify session restoration, and exercise access-token refresh. Revoke access in
+  Dropbox settings and verify LocalTell offers reconnection without removing local data.
+6. List existing managed backups, inspect one and cancel the restore preview. Confirm the remote
+  files are unchanged. Restore only after reviewing and confirming the merge.
+7. With explicitly approved test data, create one append-only backup and verify it. Confirm older
+  Android snapshots remain present; do not delete, rename or overwrite them as part of the test.
+8. Disconnect with confirmation. Verify local data/packs and remote backups remain, and any failed
+  remote token revocation is reported separately. Never include tokens, codes or PKCE verifiers
+  in screenshots or diagnostics shared with others.
+
 | Area | Location | Notes |
 |---|---|---|
 | Location codes | `src/app/core/location-code/` | Exact BigInt port of Android `LocalTellLocationCode.kt` (V1). |

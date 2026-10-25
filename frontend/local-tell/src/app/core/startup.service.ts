@@ -9,10 +9,14 @@ import { DropboxAuthService } from './dropbox/dropbox-auth.service';
 import { DropboxBackupService } from './dropbox/dropbox-backup.service';
 import { ConnectivityService } from './ui/connectivity.service';
 import { describeStorageError } from './storage/idb';
+import { AnnouncementService } from './announcements/announcement.service';
+import { ThemeService } from './settings/theme.service';
 
 /** Loads local data without blocking first render; offline features never wait for the network. */
 @Service()
 export class StartupService {
+  private readonly announcements = inject(AnnouncementService);
+  private readonly theme = inject(ThemeService);
   private readonly savedPlaces = inject(SavedPlacesService);
   private readonly preferences = inject(PreferencesService);
   private readonly packs = inject(PackCatalogService);
@@ -26,6 +30,8 @@ export class StartupService {
   readonly storageError = this.storageErrorState.asReadonly();
 
   start(): void {
+    this.theme.apply();
+    void this.announcements.start();
     void this.loadLocal();
     if (!window.location.pathname.endsWith('/dropbox/callback')) void this.startDropbox();
     this.connectivity.onReconnect(() => {

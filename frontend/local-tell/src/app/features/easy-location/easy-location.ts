@@ -8,6 +8,7 @@ import { LocationResult } from '../../shared/components/location-result';
 import { MapView, type MapMarker } from '../../shared/components/map-view';
 import { Icon } from '../../shared/components/icon';
 import { interpretInput } from './interpret-input';
+import { AnnouncementCard } from '../../shared/components/announcement-card';
 
 const ORIGIN_MARKER: Partial<Record<LocationOrigin, MapMarker['kind']>> = {
   'numeric-code': 'decoded',
@@ -19,7 +20,7 @@ const ORIGIN_MARKER: Partial<Record<LocationOrigin, MapMarker['kind']>> = {
 
 @Component({
   selector: 'app-easy-location',
-  imports: [FormField, LocationResult, MapView, Icon],
+  imports: [FormField, LocationResult, MapView, Icon, AnnouncementCard],
   templateUrl: './easy-location.html',
 })
 export class EasyLocation {

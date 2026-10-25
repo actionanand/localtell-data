@@ -1,7 +1,20 @@
+<fieldset class="theme-choices">
+  <legend>Appearance</legend>
+  @for (mode of themeModes; track mode) {
+    <label><input type="radio" name="theme" [value]="mode" [checked]="theme.mode() === mode" (change)="theme.set(mode)" /> {{ mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark' }}</label>
+  }
+</fieldset>
+
 <header class="page-header">
   <h1>Settings</h1>
   <p>Local data, preferences, configuration and privacy information for this browser.</p>
 </header>
+
+<section aria-labelledby="geography-license-title" class="mb">
+  <h2 id="geography-license-title">Geographic data sources</h2>
+  <p>Country guidance: Natural Earth (public domain). India state/UT guidance: geoBoundaries gbOpen, DataMeet India community / Election Commission of India, <a href="https://creativecommons.org/licenses/by/2.5/in/" target="_blank" rel="noopener">CC BY 2.5 IN</a>. Not a legal or survey boundary map.</p>
+  <a [href]="geographyNotice" target="_blank" rel="noopener">Full offline NOTICE</a> · <a [href]="geographyProvenance" target="_blank" rel="noopener">Pinned provenance and source hashes</a>
+</section>
 
 <div class="grid">
   <section class="card" aria-labelledby="data-title">

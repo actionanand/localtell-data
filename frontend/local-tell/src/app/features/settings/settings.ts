@@ -11,6 +11,7 @@ import { DropboxAuthService } from '../../core/dropbox/dropbox-auth.service';
 import { NotificationService } from '../../core/ui/notification.service';
 import { formatPackBytes } from '../../core/geographic-packs/pack-manifest';
 import { ConfirmDialog } from '../../shared/components/confirm-dialog';
+import { ThemeService, type ThemeMode } from '../../core/settings/theme.service';
 
 type DataCategory = 'saved' | 'journeys' | 'recent' | 'observations' | 'packs';
 
@@ -28,6 +29,10 @@ const CATEGORY_TEXT: Readonly<Record<DataCategory, { title: string; body: string
   templateUrl: './settings.html',
 })
 export class Settings {
+  protected readonly geographyNotice = new URL('geography/NOTICE.txt', document.baseURI).href;
+  protected readonly geographyProvenance = new URL('geography/provenance.json', document.baseURI).href;
+  protected readonly theme = inject(ThemeService);
+  protected readonly themeModes: readonly ThemeMode[] = ['system', 'light', 'dark'];
   protected readonly config = inject(APP_CONFIG);
   protected readonly saved = inject(SavedPlacesService);
   protected readonly appData = inject(AppDataService);

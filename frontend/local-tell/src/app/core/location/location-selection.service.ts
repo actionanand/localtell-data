@@ -3,6 +3,8 @@ import type { SelectedLocation } from '../models/location';
 import type { LocalityMatch } from '../offline-resolver/offline-locality-resolver';
 import { OfflineLocalityService } from '../offline-resolver/offline-locality.service';
 import { RecentLookupsService } from './recent-lookups.service';
+import { GeographyService } from '../geography/geography.service';
+import { AnnouncementService } from '../announcements/announcement.service';
 
 export type LocalityState =
   | { readonly status: 'idle' }
@@ -16,6 +18,8 @@ export type LocalityState =
 export class LocationSelectionService {
   private readonly resolver = inject(OfflineLocalityService);
   private readonly recent = inject(RecentLookupsService);
+  private readonly geography = inject(GeographyService);
+  private readonly announcements = inject(AnnouncementService);
   private readonly selectedState = signal<SelectedLocation | null>(null);
   private readonly localityState = signal<LocalityState>({ status: 'idle' });
   private generation = 0;
@@ -25,6 +29,8 @@ export class LocationSelectionService {
 
   select(location: SelectedLocation, options: { remember?: boolean } = {}): void {
     this.selectedState.set(location);
+    this.announcements.suppressForSession();
+    this.geography.identify(location);
     if (options.remember !== false) void this.recent.remember(location).catch(() => undefined);
     void this.resolve(location);
   }

@@ -8,11 +8,12 @@ import { savedPlaceFor, type SavedPlaceSource } from '../../core/saved-places/sa
 import { NotificationService } from '../../core/ui/notification.service';
 import { Icon } from './icon';
 import { RouterLink } from '@angular/router';
+import { GeographyGuidance } from './geography-guidance';
 
 /** Result panel: both codes, coordinates, offline locality and every quick action. */
 @Component({
   selector: 'app-location-result',
-  imports: [Icon, RouterLink],
+  imports: [Icon, RouterLink, GeographyGuidance],
   template: `
     @let loc = location();
     <section class="card result" aria-labelledby="result-title">
@@ -27,6 +28,7 @@ import { RouterLink } from '@angular/router';
         }
       </p>
 
+      <app-geography-guidance />
       <dl class="kv">
         <dt>19-digit code</dt>
         <dd><span class="code-value" data-testid="numeric-code">{{ loc.encoded.numericCode }}</span></dd>

@@ -2,18 +2,13 @@ name: LocalTell Web
 
 on:
   pull_request:
-    paths:
-      - 'frontend/local-tell/**'
-      - '.github/workflows/localtell-web.yml'
+    branches: [main-github]
   push:
-    branches: [master]
-    paths:
-      - 'frontend/local-tell/**'
-      - '.github/workflows/localtell-web.yml'
+    branches: [main-github]
   workflow_dispatch:
     inputs:
       deploy:
-        description: 'Deploy to GitHub Pages (only honoured on master)'
+        description: 'Deploy to GitHub Pages (only honoured on main-github)'
         type: boolean
         default: false
 
@@ -49,7 +44,7 @@ jobs:
       - name: Build for GitHub Pages
         run: npm run build:gh
         env:
-          BASE_HREF: /${{ github.event.repository.name }}/
+          BASE_HREF: /localtell-data/
 
       - name: Mirror verified geographic packs (same-origin downloads)
         run: npm run mirror:data
@@ -67,7 +62,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || inputs.deploy)
+    if: github.ref == 'refs/heads/main-github' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     runs-on: ubuntu-latest
     permissions:
       pages: write

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "countryCode": "LK",
+  "countryName": "Sri Lanka",
+  "packType": "province",
+  "generatedAt": "2026-10-15T06:12:12Z",
+  "packs": [
+    {
+      "id": "LK-1",
+      "name": "Western Province",
+      "adminCode": "LK-1",
+      "version": 1,
+      "displayOrder": 1,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-1.db.gz",
+      "sha256": "13aa2116c727aef72bff06db538065bb8286fd61fcfb6e76de8c95a6e3b2442b",
+      "compressedBytes": 62106,
+      "uncompressedBytes": 221184
+    },
+    {
+      "id": "LK-2",
+      "name": "Central Province",
+      "adminCode": "LK-2",
+      "version": 1,
+      "displayOrder": 2,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-2.db.gz",
+      "sha256": "020d7318275aec8b1ec95cb4fb411c155ce6c73417bc987bf06338eedaf4eec4",
+      "compressedBytes": 80140,
+      "uncompressedBytes": 274432
+    },
+    {
+      "id": "LK-3",
+      "name": "Southern Province",
+      "adminCode": "LK-3",
+      "version": 1,
+      "displayOrder": 3,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-3.db.gz",
+      "sha256": "0e22ba7885c23b1d4587130f3d689e91b96a077e45cbda3a208c956c4e8c6611",
+      "compressedBytes": 48796,
+      "uncompressedBytes": 180224
+    },
+    {
+      "id": "LK-4",
+      "name": "Northern Province",
+      "adminCode": "LK-4",
+      "version": 1,
+      "displayOrder": 4,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-4.db.gz",
+      "sha256": "76a3bcb25c3b8f5ca4eaa3926167f23feeba46982d26b98bc095e33c5c1f5041",
+      "compressedBytes": 44482,
+      "uncompressedBytes": 172032
+    },
+    {
+      "id": "LK-5",
+      "name": "Eastern Province",
+      "adminCode": "LK-5",
+      "version": 1,
+      "displayOrder": 5,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-5.db.gz",
+      "sha256": "2d198a07bdc6e86dcd87341dcea2d45a0821953ac5958af4eccfa580d09a4398",
+      "compressedBytes": 41067,
+      "uncompressedBytes": 163840
+    },
+    {
+      "id": "LK-6",
+      "name": "North Western Province",
+      "adminCode": "LK-6",
+      "version": 1,
+      "displayOrder": 6,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-6.db.gz",
+      "sha256": "73c1b01c0a9aaa829fe30623dde47bf900f65f71fb8ab41d83bf2a0422741582",
+      "compressedBytes": 37510,
+      "uncompressedBytes": 159744
+    },
+    {
+      "id": "LK-7",
+      "name": "North Central Province",
+      "adminCode": "LK-7",
+      "version": 1,
+      "displayOrder": 7,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-7.db.gz",
+      "sha256": "8cd0b5ed17dda88d48ec6f1dd68ea16f5224d6cc03984513ea7e2497906ecb3d",
+      "compressedBytes": 44685,
+      "uncompressedBytes": 159744
+    },
+    {
+      "id": "LK-8",
+      "name": "Uva Province",
+      "adminCode": "LK-8",
+      "version": 1,
+      "displayOrder": 8,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-8.db.gz",
+      "sha256": "e23d3b4af6e70a77f38a16cdff3c8b219ff16f2a80db4546a6362a57ebca59ac",
+      "compressedBytes": 71801,
+      "uncompressedBytes": 229376
+    },
+    {
+      "id": "LK-9",
+      "name": "Sabaragamuwa Province",
+      "adminCode": "LK-9",
+      "version": 1,
+      "displayOrder": 9,
+      "downloadUrl": "https://github.com/actionanand/localtell-data/releases/download/country-lk-v1/LK-9.db.gz",
+      "sha256": "039ae0b64c77d5e60fdfbe7b9066d3c2412e82b81febafa2139fe95de4696846",
+      "compressedBytes": 59534,
+      "uncompressedBytes": 208896
+    }
+  ]
+}
